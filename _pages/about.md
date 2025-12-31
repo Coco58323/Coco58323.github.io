@@ -9,9 +9,9 @@ redirect_from:
 
 ## 👀 About Me
 
-I am a second-year M.Phil. student in the [School of Computer Science and Engineering](https://www2.scut.edu.cn/cs/) at [South China University of Technology (SCUT)](https://www.scut.edu.cn/), advised by Prof. [Tong Zhang](https://tongzhang-ml.org/) and Prof. [C.L. Philip Chen](https://scholar.google.com/citations?user=eYZVDSIAAAAJ). I was a visiting scholar at [Hong Kong University of Science and Technology (Guangzhou)](https://www.hkust-gz.edu.cn/) from 2023 to 2024.
+I'm a graduate student of the [School of Computer Science and Engineering](https://www2.scut.edu.cn/cs/) at [South China University of Technology (SCUT)](https://www.scut.edu.cn/), advised by Prof. [Tong Zhang](https://tongzhang-ml.org/) and Prof. [C.L. Philip Chen](https://scholar.google.com/citations?user=eYZVDSIAAAAJ). I was a visiting student at [Hong Kong University of Science and Technology (Guangzhou)](https://www.hkust-gz.edu.cn/) from 2023 to 2024.
 
-I received my B.Sc. degree from South China University of Technology in 2023 with **GPA: 3.89/4.0**. My research focuses on **LLM Inference Acceleration**, including model quantization, attention sparsity, and speculative decoding. I have published **4 first-author papers** at top-tier venues with **100+ citations**.
+I earned my Bachelor of Science degree from South China University of Technology in 2023, graduating with a **GPA of 3.89/4.0**. My research centers on **Efficiency**, encompassing areas such as model compression, efficient architectures, and optimizing pre-training and inference.
 
 ## 📣 News
 
