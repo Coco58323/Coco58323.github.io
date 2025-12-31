@@ -9,14 +9,8 @@ main:
   # - title: "Teaching"
   #   url: /teaching/    
     
-  - title: "Portfolio"
-    url: https://coco58323.github.io/portfolio/
-        
-  # - title: "Blog Posts"
-  #   url: /year-archive/
-    
-  - title: "CV"
-    url: https://coco58323.github.io/cv/
+  - title: "Blogs"
+    url: /year-archive/
     
   # - title: "Guide"
   #   url: /markdown/
