@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>评论归档 - 科学空间索引</title>
+    <style>
+        :root {
+            --bg: #0d1117;
+            --bg-card: #161b22;
+            --text: #e6edf3;
+            --text-dim: #8b949e;
+            --accent: #58a6ff;
+            --border: #30363d;
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        header {
+            margin-bottom: 2rem;
+        }
+        
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .back {
+            color: var(--accent);
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        
+        .back:hover { text-decoration: underline; }
+        
+        .list {
+            list-style: none;
+        }
+        
+        .list li {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 0.75rem;
+            transition: border-color 0.2s;
+        }
+        
+        .list li:hover {
+            border-color: var(--accent);
+        }
+        
+        .list a {
+            display: block;
+            padding: 1rem 1.25rem;
+            color: var(--text);
+            text-decoration: none;
+        }
+        
+        .list .id {
+            color: var(--text-dim);
+            font-size: 0.85rem;
+        }
+        
+        .empty {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-dim);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <a href="../" class="back">← 返回首页</a>
+            <h1>💬 评论归档</h1>
+        </header>
+        
+        <main>
+            <ul class="list" id="file-list">
+                <li class="empty">加载中...</li>
+            </ul>
+        </main>
+    </div>
+    
+    <script>
+        // 由于 GitHub Pages 不支持目录列表，这里需要手动维护文件列表
+        // 或者使用构建脚本自动生成
+        const files = [
+            { id: '5383', title: '变分自编码器（三）：这样做为什么能成？' },
+            { id: '5887', title: '文章评论归档' },
+            // 添加更多文件...
+        ];
+        
+        const list = document.getElementById('file-list');
+        
+        if (files.length === 0) {
+            list.innerHTML = '<li class="empty">暂无评论归档</li>';
+        } else {
+            list.innerHTML = files.map(f => `
+                <li>
+                    <a href="${f.id}.html">
+                        <span class="id">#${f.id}</span>
+                        ${f.title || '评论归档'}
+                    </a>
+                </li>
+            `).join('');
+        }
+    </script>
+</body>
+</html>
+

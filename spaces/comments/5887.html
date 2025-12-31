@@ -1,0 +1,2536 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>变分自编码器（四）：一步到位的聚类方案 - 评论归档</title>
+    
+    <!-- MathJax 配置 -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            options: {
+                skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+    
+    <style>
+        :root {
+            --bg-primary: #0f0f0f;
+            --bg-secondary: #1a1a1a;
+            --bg-tertiary: #252525;
+            --bg-hover: #2a2a2a;
+            --text-primary: #e8e8e8;
+            --text-secondary: #a0a0a0;
+            --text-muted: #666;
+            --accent: #4a9eff;
+            --accent-dim: #3a7acc;
+            --border: #333;
+            --reply-border: #444;
+            --author-color: #6cb6ff;
+            --author-admin: #f0a040;
+            --date-color: #7a7a7a;
+            --layer-bg: #2d4a5e;
+            --layer-reply-bg: #3d5a3e;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.7;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        header {
+            text-align: center;
+            padding: 2rem 0 3rem;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 2rem;
+        }
+        
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+            line-height: 1.4;
+        }
+        
+        h1 a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+        
+        h1 a:hover {
+            text-decoration: underline;
+        }
+        
+        .meta {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+        
+        .meta span {
+            margin: 0 0.5rem;
+        }
+        
+        .stats {
+            display: inline-flex;
+            gap: 1.5rem;
+            margin-top: 1rem;
+            padding: 0.75rem 1.5rem;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+        }
+        
+        .stat {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+        
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+        
+        .comment-thread {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+        
+        .comment {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .comment:last-child {
+            border-bottom: none;
+        }
+        
+        .comment.reply {
+            background: var(--bg-tertiary);
+            margin-left: 0;
+            padding-left: 2rem;
+            border-left: 3px solid var(--reply-border);
+        }
+        
+        .comment.reply-deep {
+            background: var(--bg-hover);
+            padding-left: 2.5rem;
+        }
+        
+        .comment-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+            flex-wrap: wrap;
+        }
+        
+        .author {
+            font-weight: 600;
+            color: var(--author-color);
+            text-decoration: none;
+        }
+        
+        .author.admin {
+            color: var(--author-admin);
+        }
+        
+        .author:hover {
+            text-decoration: underline;
+        }
+        
+        .layer {
+            font-size: 0.75rem;
+            padding: 0.2rem 0.5rem;
+            background: var(--layer-bg);
+            color: #fff;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+        
+        .layer.reply {
+            background: var(--layer-reply-bg);
+        }
+        
+        .date {
+            font-size: 0.85rem;
+            color: var(--date-color);
+            margin-left: auto;
+        }
+        
+        .comment-content {
+            color: var(--text-primary);
+            font-size: 0.95rem;
+        }
+        
+        .comment-content p {
+            margin-bottom: 0.75rem;
+        }
+        
+        .comment-content p:last-child {
+            margin-bottom: 0;
+        }
+        
+        .comment-content blockquote {
+            border-left: 3px solid var(--accent-dim);
+            padding-left: 1rem;
+            margin: 0.75rem 0;
+            color: var(--text-secondary);
+            background: var(--bg-primary);
+            padding: 0.75rem 1rem;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .comment-content a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+        
+        .comment-content a:hover {
+            text-decoration: underline;
+        }
+        
+        .comment-content code {
+            background: var(--bg-tertiary);
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        
+        .comment-content br {
+            display: block;
+            margin-bottom: 0.5rem;
+            content: "";
+        }
+        
+        /* MathJax 样式优化 */
+        .MathJax {
+            font-size: 1.1em !important;
+        }
+        
+        mjx-container {
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding: 0.25rem 0;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            border-top: 1px solid var(--border);
+            margin-top: 2rem;
+        }
+        
+        footer a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+        
+        .no-comments {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-muted);
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            h1 {
+                font-size: 1.4rem;
+            }
+            
+            .comment {
+                padding: 1rem;
+            }
+            
+            .comment.reply {
+                padding-left: 1.25rem;
+            }
+            
+            .date {
+                width: 100%;
+                margin-left: 0;
+                margin-top: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><a href="https://spaces.ac.cn/archives/5887" target="_blank">变分自编码器（四）：一步到位的聚类方案</a></h1>
+            <p class="meta">
+                <span>评论归档</span>
+                <span>•</span>
+                <span>生成于 2025-12-29 20:37</span>
+            </p>
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-value">167</div>
+                    <div class="stat-label">条评论</div>
+                </div>
+            </div>
+        </header>
+        
+        <main>
+<div class="comment-thread">
+    <div class="comment" id="comment-9790">
+        <div class="comment-header">
+            <span class="author">dagg14</span>
+            <span class="layer">楼主</span>
+            <span class="date">September 18th, 2018</span>
+        </div>
+        <div class="comment-content">
+            <div class="ListContent" id="comment-9790">
+<p>你好，看了你的文章，对于vae的理解又多了一些。非常感谢。<br/>
+在这里，我想问几个关于vae训练的问题。希望您能帮忙解答。</p><p>1. vae的encoder和decoder在设计时有什么注意事项呢。比如我想要预训练好的resnet50作为vae的encoder，然后用随机初始化的resnet18（结构类似，中间用反卷积）作为解码器。请问这个结构设计是否合理呢。</p><p>2. vae在训练的时候，有没有一些技巧呢。经常容易出现kl loss下降到某个点，然后就一直上升。但是mse loss一直下降。请问这个现象为什么会出现呢。</p><p>3. vae中mse loss和kl loss之间是否需要有weights呢？一般对于mnist数据，mse loss比较小，但是当使用224x224x3大小的图片来训练的话，mse loss就会非常大，远远超过kl loss。</p><p>问的比较乱，希望能回答一下。非常感谢。</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply" id="comment-9811">
+        <div class="comment-header">
+            <span class="author">dagg14</span>
+            <span class="layer reply">第2层</span>
+            <span class="date">September 21st, 2018</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-9811">
+<p>真心请教，希望博主能够帮忙解答一下。</p> 
+</div>
+        </div>
+    </div>
+</div>
+<div class="comment-thread">
+    <div class="comment" id="comment-9801">
+        <div class="comment-header">
+            <span class="author">freeopen</span>
+            <span class="layer">第2层</span>
+            <span class="date">September 20th, 2018</span>
+        </div>
+        <div class="comment-content">
+            <div class="ListContent" id="comment-9801">
+<p>(4) 到（5）的改写能详细点么？自己推了一下，总是和（5）式不一致，不知道问题在哪里。。。</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-9802">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第3层</span>
+            <span class="date">September 20th, 2018</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-9802">
+<p>$$\begin{aligned}&amp;\sum_y \iint p(y|z)p(z|x)\tilde{p}(x)\ln \frac{p(y|z)p(z|x)\tilde{p}(x)}{q(x|z)q(z|y)q(y)} dzdx\\<br/>
+=&amp;\mathbb{E}_{x\sim\tilde{p}(x)}\left[\sum_y \int p(y|z)p(z|x)\ln \frac{p(y|z)p(z|x)\tilde{p}(x)}{q(x|z)q(z|y)q(y)} dz\right]\\<br/>
+=&amp;\mathbb{E}_{x\sim\tilde{p}(x)}\left[\sum_y \int p(y|z)p(z|x)\left(-\ln q(x|z) + \ln\frac{p(z|x)}{q(z|y)}+\ln\frac{p(y|z)}{q(y)}+\ln \tilde{p}(x) \right)dz\right]<br/>
+\end{aligned}$$<br/>
+$\ln \tilde{p}(x)$相当于常数，不影响结果，可以去掉，所以结果等价于<br/>
+$$\begin{aligned}&amp;\mathbb{E}_{x\sim\tilde{p}(x)}\left[\sum_y \int p(y|z)p(z|x)\left(-\ln q(x|z) + \ln\frac{p(z|x)}{q(z|y)}+\ln\frac{p(y|z)}{q(y)}\right)dz\right]<br/>
+\end{aligned}$$<br/>
+重参数运算实际上就相当于完成了$p(z|x)dz$这部分积分，所以等价于<br/>
+$$\begin{aligned}&amp;\mathbb{E}_{x\sim\tilde{p}(x)}\left[\sum_y p(y|z)\left(-\ln q(x|z) + \ln\frac{p(z|x)}{q(z|y)}+\ln\frac{p(y|z)}{q(y)}\right)\right],z\sim p(z|x)<br/>
+\end{aligned}$$<br/>
+剩下的在文中已经做了推导。</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-10304">
+        <div class="comment-header">
+            <span class="author">jamesp</span>
+            <span class="layer reply">第4层</span>
+            <span class="date">December 10th, 2018</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-10304">
+<p>请问第二项的p(y|z)怎么提到dz积分外面来了呢？难道p(y|z)跟z无关？谢谢</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-10305">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第5层</span>
+            <span class="date">December 10th, 2018</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-10305">
+<p>感谢提出这个问题，经检查确实是一个bug，已经修正，对结果有些不小不大的影响。</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-10308">
+        <div class="comment-header">
+            <span class="author">jamesp</span>
+            <span class="layer reply">第6层</span>
+            <span class="date">December 10th, 2018</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-10308">
+<p>赞速度~</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-15992">
+        <div class="comment-header">
+            <span class="author">niu</span>
+            <span class="layer reply">第6层</span>
+            <span class="date">April 5th, 2021</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-15992">
+<p>老师，请问，修改完bug，最终的结果应该是什么？</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-15997">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第7层</span>
+            <span class="date">April 6th, 2021</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-15997">
+<p>就是本文。</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-16034">
+        <div class="comment-header">
+            <span class="author">niu</span>
+            <span class="layer reply">第8层</span>
+            <span class="date">April 8th, 2021</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-16034">
+<p>大神，$\mathbb{E}_{x\sim\tilde{p}(x)}\left[\sum_y p(y|z)\left(-\ln q(x|z) + \ln\frac{p(z|x)}{q(z|y)}+\ln\frac{p(y|z)}{q(y)}\right)\right],z\sim p(z|x)<br/>
+$变换以后应该是$\mathbb{E}_{x\sim\tilde{p}(x)}\Big[- \sum_y p(y|z)\log q(x|z) + \sum_y p(y|z) \log \frac{p(z|x)}{q(z|y)} + KL\big(p(y|z)\big\Vert q(y)\big)\Big],\quad z\sim p(z|x) $,<br/>
+你的公式5中第一项没有$\sum_y p(y|z)$，只有$\log q(x|z)$,把$\sum_y p(y|z)$去掉了，不理解。</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-16042">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第8层</span>
+            <span class="date">April 8th, 2021</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-16042">
+<p><a href="https://spaces.ac.cn/archives/5887/comment-page-1#comment-16034">@niu|comment-16034</a></p><p>如果连$\sum_y p(y|z)=1$都不理解，那你是怎么看到第四篇的？</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-16056">
+        <div class="comment-header">
+            <span class="author">niu</span>
+            <span class="layer reply">第8层</span>
+            <span class="date">April 9th, 2021</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-16056">
+<p>可是我看到你后两项都保留p(y|z)，既然p（y|z）的和为1，那为什么后两项不去掉？</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-16058">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第8层</span>
+            <span class="date">April 9th, 2021</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-16058">
+<p><a href="https://spaces.ac.cn/archives/5887/comment-page-1#comment-16056">@niu|comment-16056</a></p><p>建议你去补习一下基本的数学运算常识。第一项是$\sum_y p(y|z)$，后两项哪里是$\sum_y p(y|z)$了？</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-18541">
+        <div class="comment-header">
+            <span class="author">ak422</span>
+            <span class="layer reply">第8层</span>
+            <span class="date">February 28th, 2022</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-18541">
+<p>请问一下，在公式 $(4)$ 和公式 $(5)$ 之间是不是还缺少一个求期望的过程？如下公式$(**)$所示。<br/>
+\begin{align}&amp;\mathbb{E}_{x\sim\tilde{p}(x)}\left[\sum_y \int p(y|z)p(z|x)\left(-\ln q(x|z) + \ln\frac{p(z|x)}{q(z|y)}+\ln\frac{p(y|z)}{q(y)}\right)dz\right] \tag{4}<br/>
+\end{align}</p><p>\begin{align}&amp;\mathbb{E}_{x\sim\tilde{p}(x)}\left[\sum_y \mathbb{E}_{z\sim{p}(z|x)}\left[ p(y|z)p(z|x)\left(-\ln q(x|z) + \ln\frac{p(z|x)}{q(z|y)}+\ln\frac{p(y|z)}{q(y)}\right)\right]\right],z\sim p(z|x)\tag{**}<br/>
+\end{align}</p><p>\begin{align}<br/>
+&amp;\mathbb{E}_{x\sim\tilde{p}(x)}\left[\sum_y p(y|z)\left(-\ln q(x|z) + \ln\frac{p(z|x)}{q(z|y)}+\ln\frac{p(y|z)}{q(y)}\right)\right],z\sim p(z|x) \tag{5}<br/>
+\end{align}</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-18550">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第8层</span>
+            <span class="date">February 28th, 2022</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-18550">
+<p><a href="https://spaces.ac.cn/archives/5887/comment-page-1#comment-18541">@ak422|comment-18541</a></p><p>不明白你要表达什么。</p><p>你的$(**)$应该是<br/>
+$$\mathbb{E}_{x\sim\tilde{p}(x)}\left[\sum_y \mathbb{E}_{z\sim{p}(z|x)}\left[ p(y|z)\left(-\ln q(x|z) + \ln\frac{p(z|x)}{q(z|y)}+\ln\frac{p(y|z)}{q(y)}\right)\right]\right],z\sim p(z|x)$$<br/>
+修正了，然后呢？照样是得到$(5)$呀。你是说我跳步太多了？</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-10321">
+        <div class="comment-header">
+            <span class="author">CharmZhang</span>
+            <span class="layer reply">第4层</span>
+            <span class="date">December 12th, 2018</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-10321">
+<p>重参数运算实际上就相当于完成了p(z|x)dz这部分积分  这个怎么理解呀 老师</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-10331">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第5层</span>
+            <span class="date">December 13th, 2018</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-10331">
+<p>因为对p(z|x)的积分，就是相当于在p(z|x)中采样呀。</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-22544">
+        <div class="comment-header">
+            <span class="author">李俊雄</span>
+            <span class="layer reply">第6层</span>
+            <span class="date">August 21st, 2023</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-22544">
+<p>苏老师，我还是不太理解，为什么相当于p(z|x)中采样，那个积分好就可以拿掉？</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-22565">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第7层</span>
+            <span class="date">August 25th, 2023</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-22565">
+<p>积分就相当于求期望，重参数就相当于采样一个点来估计期望，同时保留了梯度。</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-22545">
+        <div class="comment-header">
+            <span class="author">李俊雄</span>
+            <span class="layer reply">第6层</span>
+            <span class="date">August 21st, 2023</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-22545">
+<p>哦，苏老师，是不是蒙特卡洛估计？</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-19536">
+        <div class="comment-header">
+            <span class="author">skbl5694</span>
+            <span class="layer reply">第4层</span>
+            <span class="date">July 26th, 2022</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-19536">
+<p>苏神好呀，请问将$ln\frac{p(y|z)p(z|x)\widetilde{p}(x)}{q(x|z)q(z|y)q(y)}$这一项拆分为$-lnq(x|z)$, $ln\frac{p(z|x)}{q(z|y)}$, $ln\frac{p(y|z)}{q(y)}$,$ln\widetilde{p}(x)$这四项背后的指导思想是什么呢？ 经过前面的阅读，我模糊地认为 $-lnq(x|z)$这一项被拆出是对应着重构损失， $ln\frac{p(y|z)}{q(y)}$这一项被拆出是为了结合括号为的$p(y|z)$组成KL散度， $ln\widetilde{p}(x)$这一项是一个可忽略的常数项。 所以剩余的$ln\frac{p(z|x)}{q(z|y)}$这一部分仅仅是因为它被剩下了么？还是说它也对应着什么目前我还不知道的含义？</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-19545">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第5层</span>
+            <span class="date">July 27th, 2022</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-19545">
+<p>因为分布的随机变量相同</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-19548">
+        <div class="comment-header">
+            <span class="author">skbl5694</span>
+            <span class="layer reply">第6层</span>
+            <span class="date">July 27th, 2022</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-19548">
+<p>哦哦，原来是这样，恍然大悟</p> 
+</div>
+        </div>
+    </div>
+</div>
+<div class="comment-thread">
+    <div class="comment" id="comment-9994">
+        <div class="comment-header">
+            <span class="author">张立</span>
+            <span class="layer">第3层</span>
+            <span class="date">October 23rd, 2018</span>
+        </div>
+        <div class="comment-content">
+            <div class="ListContent" id="comment-9994">
+<p>请问博主，这种聚类的方法，能用在分类的问题上？</p> 
+</div>
+        </div>
+    </div>
+</div>
+<div class="comment-thread">
+    <div class="comment" id="comment-10003">
+        <div class="comment-header">
+            <span class="author">zlstart2018</span>
+            <span class="layer">第4层</span>
+            <span class="date">October 24th, 2018</span>
+        </div>
+        <div class="comment-content">
+            <div class="ListContent" id="comment-10003">
+<p>我的数据是带正负样本的，苏老师能帮忙解释一下吗，感谢~~。</p> 
+</div>
+        </div>
+    </div>
+</div>
+<div class="comment-thread">
+    <div class="comment" id="comment-10004">
+        <div class="comment-header">
+            <span class="author">zlstart2018</span>
+            <span class="layer">第5层</span>
+            <span class="date">October 24th, 2018</span>
+        </div>
+        <div class="comment-content">
+            <div class="ListContent" id="comment-10004">
+<p>问题是：我的数据是带正负样本的数据，希望训练模型，将未知的样本分类，还希苏老师能帮忙解疑</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-10011">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第6层</span>
+            <span class="date">October 24th, 2018</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-10011">
+<p>直接训练一个二分类模型不就行了？为什么要涉及到聚类？</p> 
+</div>
+        </div>
+    </div>
+</div>
+<div class="comment-thread">
+    <div class="comment" id="comment-10164">
+        <div class="comment-header">
+            <span class="author">bigguaizi</span>
+            <span class="layer">第6层</span>
+            <span class="date">November 20th, 2018</span>
+        </div>
+        <div class="comment-content">
+            <div class="ListContent" id="comment-10164">
+<p>苏神，我想问代码中cat_loss = K.mean(y * K.log(y + K.epsilon()), 0)具体是怎么由第三项loss推导出来的啊？<br/>
+其中K.epsilon()怎么理解啊？跟之前的重参数技巧中的 epsilon是一个东西么？</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-10165">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第7层</span>
+            <span class="date">November 20th, 2018</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-10165">
+<p>K.epsilon()是一个很小的正数，防止log(0)的出现......</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-10269">
+        <div class="comment-header">
+            <span class="author">bigguaizi</span>
+            <span class="layer reply">第8层</span>
+            <span class="date">December 5th, 2018</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-10269">
+<p>q(z|y)的均值μy是由一层网络得到的吧？</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-10273">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第9层</span>
+            <span class="date">December 5th, 2018</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-10273">
+<p>是</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-11821">
+        <div class="comment-header">
+            <span class="author">wq</span>
+            <span class="layer reply">第10层</span>
+            <span class="date">August 14th, 2019</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-11821">
+<p>苏神，还是不懂cat_loss = K.mean(y * K.log(y + K.epsilon()), 0)具体是怎么由第三项loss推导出来的，能具体解释一下吗</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-11831">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第11层</span>
+            <span class="date">August 15th, 2019</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-11831">
+<p>$$\begin{aligned}K(p(y|x)\Vert q(y))=&amp;\sum_y p(y|x)\log \frac{p(y|x)}{q(y)}\\=&amp;\sum_y p(y|x)\log p(y|x) - \sum_y p(y|x)\log q(y)\end{aligned}$$<br/>
+注意类别的先验分布被假设为均匀分布，也就是$q(y)$是个常数。所以$\sum_y p(y|x)\log q(y)=\log q(y)$只是一个常数，因此只剩下$\sum_y p(y|x)\log p(y|x)$这一项。</p> 
+</div>
+        </div>
+    </div>
+</div>
+<div class="comment-thread">
+    <div class="comment" id="comment-10281">
+        <div class="comment-header">
+            <span class="author">hhxhdg</span>
+            <span class="layer">第7层</span>
+            <span class="date">December 6th, 2018</span>
+        </div>
+        <div class="comment-content">
+            <div class="ListContent" id="comment-10281">
+<p>大佬，小萌新有点看不懂代码中的Gaussian类，是怎么求出μy的呀？这个的输入是z么？是的话，但要求的不是从y到z的均值么，输入应该是y吧？z * 0 + K.expand_dims(self.mean, 0)这个返回值怎么理解，为啥要乘0啊？希望大神能帮忙解答，打扰了</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-10286">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第8层</span>
+            <span class="date">December 7th, 2018</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-10286">
+<p>self.mean的shape是(num_classes, latent_dim)，K.expand_dims之后就是(1, num_classes, latent_dim)。</p><p>z = K.expand_dims(z, 1)之后，z的shape就是(batch_size, 1, latent_dim)。</p><p>z * 0 + self.mean的shape是(batch_size, num_classes, latent_dim)，但是跟z无关，说白了就是把self.mean重复batch_size次...</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-15383">
+        <div class="comment-header">
+            <span class="author">ErickZhou</span>
+            <span class="layer reply">第9层</span>
+            <span class="date">January 26th, 2021</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-15383">
+<p>苏老师，我看您在github上的代码和您这里写的不一样。Github中，<br/>
+def call(self, inputs):<br/>
+z = inputs # z.shape=(batch_size, latent_dim)<br/>
+z = K.expand_dims(z, 1)<br/>
+return z - K.expand_dims(self.mean, 0)</p><p>我加人了几句代码，输出z, test1=K.expand_dims(self.mean, 0); test2=z - K.expand_dims(self.mean, 0)的shape，输出结果如下：<br/>
+(None, 1, 20)<br/>
+(1, 10, 20)<br/>
+(None, 10, 20)<br/>
+Epoch 1/50<br/>
+(100, 1, 20)<br/>
+(1, 10, 20)<br/>
+(100, 10, 20)</p><p>我不知道z 和 K.expand_dims(self.mean, 0)的shpae不同，为什么还能相减？</p><p>另外，关于这个函数还有2个问题向您请教。<br/>
+1.   下面这句话，是输入为class的个数(10),输出为z的均值（每个都是latent_dim长度的向量?<br/>
+self.mean = self.add_weight(name='mean',<br/>
+shape=(self.num_classes, latent_dim),<br/>
+initializer='zeros')<br/>
+2. 我看有的资料上写，自定义层的build函数最好，要有这么一句话,请问您是不是必须？<br/>
+super(MyLayer, self).build(input_shape)  # 一定要在最后调用它</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-15386">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第10层</span>
+            <span class="date">January 26th, 2021</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-15386">
+<p>对于第一个问题：请学好numpy、tf或pytorch等数组处理工具的常规用法；</p><p>对于第二个问题：请理解本文公式的各项含义；</p><p>对于第三个问题：请学好Python的面向对象编程。</p> 
+</div>
+        </div>
+    </div>
+</div>
+<div class="comment-thread">
+    <div class="comment" id="comment-10290">
+        <div class="comment-header">
+            <span class="author">hhxhdg</span>
+            <span class="layer">第8层</span>
+            <span class="date">December 7th, 2018</span>
+        </div>
+        <div class="comment-content">
+            <div class="ListContent" id="comment-10290">
+<p>哦，这个理解了，感谢！</p><p>但z_prior_mean = gaussian(z)中的调用输入为z，是对的么？不应该是求出的y么？还是我根本就没理解.....</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-10293">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第9层</span>
+            <span class="date">December 7th, 2018</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-10293">
+<p>z_prior_mean仅仅是正态分布$q(x|y)$的参数（均值）。</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-10294">
+        <div class="comment-header">
+            <span class="author">hhxhdg</span>
+            <span class="layer reply">第10层</span>
+            <span class="date">December 7th, 2018</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-10294">
+<p>输入采样来的z，通过全连接层得到均值，对么？</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-10296">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第11层</span>
+            <span class="date">December 8th, 2018</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-10296">
+<p>不是，z_prior_mean仅仅是正态分布$q(x|y)$的参数（均值），z_prior_mean仅仅是正态分布$q(x|y)$的参数（均值），z_prior_mean仅仅是正态分布$q(x|y)$的参数（均值）。</p><p>$q(x|y)$是$y$的条件概率，哪里会跟$z$有关？</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-10733">
+        <div class="comment-header">
+            <span class="author">dcz</span>
+            <span class="layer reply">第12层</span>
+            <span class="date">March 1st, 2019</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-10733">
+<p>苏神，可以具体讲一下gaussian(z)函数参数的训练过程吗？这个函数觉得不太好理解</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-10738">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第13层</span>
+            <span class="date">March 3rd, 2019</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-10738">
+<p>这个真不好说...注释我也注释了，我只能说“你可以尝试想想自己来写会怎么写”，然后对比我的代码，估计就能懂了～</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-15402">
+        <div class="comment-header">
+            <span class="author">ErickZhou</span>
+            <span class="layer reply">第14层</span>
+            <span class="date">January 27th, 2021</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-15402">
+<p>苏老师，您定义的这个Gaussian我也感觉很难理解，您能否给出一点解释。我看了自定义Layer的资料，我目前看到的，自定义Layer中的weight是和输入进行作用，得到输出。而您这里的weight看不出与输入的作用，感觉这些weight就直接对应公式8最后一项的uy了。请您指点，谢谢</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-15401">
+        <div class="comment-header">
+            <span class="author">ErickZhou</span>
+            <span class="layer reply">第10层</span>
+            <span class="date">January 27th, 2021</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-15401">
+<p>苏老师，请问您这里的q(x|y)是否应该是q(z|y)，对应于公式(8)?我没有在正文中找到q(x|y)</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-15403">
+        <div class="comment-header">
+            <span class="author">ErickZhou</span>
+            <span class="layer reply">第11层</span>
+            <span class="date">January 27th, 2021</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-15403">
+<p>苏老师，我上面没有说明白问题，我主要的困惑是Gaussian这个层中的self.mean以layer的weight形式定义，但是如何在反向传播中体现，我想不出来gaussian(z)的网络结构图。我现在觉得这个self.mean就像网络结构图中的bias，从z中被减去，得到z_prior_mean。请您指点。</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-15410">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第12层</span>
+            <span class="date">January 27th, 2021</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-15410">
+<p>我不知道你们究竟在困惑什么。Keras模型里边所有操作都需要封装成一个层，所以我才定义了这么一个层，它实际上就是z减去一个可训练向量，对应于公式$(8)$里边的$z-\mu_y$这一步。我根本不理解为什么会卡这个操作上，难道只因为我我起了一个叫做Gaussian的名字么？还是说源于对Keras的不理解？如果是后者，不是应该去补习一下Keras么？</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-15409">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第11层</span>
+            <span class="date">January 27th, 2021</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-15409">
+<p>噢噢，当时可能糊涂了，上面讨论中所有的$q(x|y)$实际上都是指$q(z|y)$。</p> 
+</div>
+        </div>
+    </div>
+</div>
+<div class="comment-thread">
+    <div class="comment" id="comment-10377">
+        <div class="comment-header">
+            <span class="author">bigguai</span>
+            <span class="layer">第9层</span>
+            <span class="date">December 17th, 2018</span>
+        </div>
+        <div class="comment-content">
+            <div class="ListContent" id="comment-10377">
+<p>苏神，K.batch_dot(K.expand_dims(y, 1), kl_loss)中axes值是多少啊？我自己推了一遍，感觉有点不对...</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-10379">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第10层</span>
+            <span class="date">December 17th, 2018</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-10379">
+<p>默认是[-1, -2]</p> 
+</div>
+        </div>
+    </div>
+</div>
+<div class="comment-thread">
+    <div class="comment" id="comment-10528">
+        <div class="comment-header">
+            <span class="author">boi</span>
+            <span class="layer">第10层</span>
+            <span class="date">January 11th, 2019</span>
+        </div>
+        <div class="comment-content">
+            <div class="ListContent" id="comment-10528">
+<p>苏神，程序好像跑不对呀，y_train_pred的55000个值是一样的。</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-10529">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第11层</span>
+            <span class="date">January 12th, 2019</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-10529">
+<p>反正我跑对了～（Python2.7 + Keras 2.2.4 + tf 1.8）</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-10534">
+        <div class="comment-header">
+            <span class="author">boi</span>
+            <span class="layer reply">第12层</span>
+            <span class="date">January 12th, 2019</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-10534">
+<p>苏神，我python是3.6，这个应该没有影响吧，然后训练的时候在跑完第一个epoch就下降到了7点多，然后后面一直没有下降，这种情况不正常额</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-10537">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第13层</span>
+            <span class="date">January 13th, 2019</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-10537">
+<p>仅供参考：<br/>
+1、我跑成功了；2、我没有造假；3、你的环境跟我的环境不一致。</p><p>我不知道python3会不会有影响，但作为基本的尊重，我认为你至少要在“完全复现环境的前提下还跑失败”再来提问，因为我不是python升级的debuger。</p> 
+</div>
+        </div>
+    </div>
+</div>
+<div class="comment-thread">
+    <div class="comment" id="comment-10823">
+        <div class="comment-header">
+            <span class="author">塔奇克马</span>
+            <span class="layer">楼主</span>
+            <span class="date">March 17th, 2019</span>
+        </div>
+        <div class="comment-content">
+            <div class="ListContent" id="comment-10823">
+<p>你好，看了您的代码和博客，有一个问题没有理解，还望您能解答一下。<br/>
+正如您在博客中描述的编码和生成过程，由x编码z再做分类得到c，然后由c采样z并经生成器恢复x，这个过程与“Variational Deep Embedding:An Unsupervised and Generative Approach to Clustering”这篇文章中图1描述是一致的。但是看您的代码似乎是由x编码z，然后利用p(z|x)采样得到z直接送入生成器恢复x，而分类部分似乎是单独的一块并没有把分类部分整合到x的端到端网络中。请您能进一步解释下吗</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply" id="comment-10825">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第2层</span>
+            <span class="date">March 17th, 2019</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-10825">
+<p>本文的代码就是严格按照你说的流程来实现的，对应的loss就是我目前的写法。</p><p>“由x编码z，然后利用p(z|x)采样得到z直接送入生成器恢复x”，只是loss的一部分，而整个模型的loss事实上要看成一个整体，所以“而分类部分似乎是单独的一块并没有把分类部分整合到x的端到端网络中”这个理解是错的，它不是单独的一块，它就是整个loss的一部分。</p><p>（你可以分步理解，但它就是一个整体，而不是两个不同loss的随意拼凑。）</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-11508">
+        <div class="comment-header">
+            <span class="author">jqwylb</span>
+            <span class="layer reply">第3层</span>
+            <span class="date">July 3rd, 2019</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-11508">
+<p>不知作者是否有读过上面提到的那篇文章，我看下来感觉二者的过程是一样的，只不过你的分类概率用的是一个softmax网络，他是直接算出一个最优概率，不知道我的理解对不对，就是觉得好像二者是一样的，又好像有点不一样，他用的是高斯混合，您这里没有提到高斯混合，但其实也是用到了，这里就有点模糊，还希望作者能给予指点。还有一个疑问就是对于目标函数的第二项，作用是希望z能尽量对齐某个类别的“专属”的正态分布，就是这一步起到聚类的作用，直接从那个目标函数如何直接解读处这个作用啊？</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-11516">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第4层</span>
+            <span class="date">July 4th, 2019</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-11516">
+<p>为什么一定要知道它“叫什么”呢？我不知道是不是高斯混合，我只知道在文本中我很清晰地、理论与实验结合地完成了我要做的事情。对于每个类的先验分布，我使用的是条件高斯分布，条件为均值。</p><p>VAE的早期工作很多相互之间都很相似，花心思去确认是否等价是一件很没有意义的事情，你只需要知道自己学到了什么、学懂了没有就是了。</p><p>如果你对本文还有疑惑，欢迎继续留言，但我没有兴趣去比较本文跟已有论文的相似性，因为我也没有要去争个优先权的意思，不想浪费这个时间。</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-12354">
+        <div class="comment-header">
+            <span class="author">塔奇克马</span>
+            <span class="layer reply">第4层</span>
+            <span class="date">November 13th, 2019</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-12354">
+<p>后来又对比了下感觉区别还是蛮大的。我提到的那篇文章是通过x的对数似然诱导出的变分下界（证据下界），然后通过优化证据下界来实现x的对数似然最大化。这里作者是目标优化KL散度。参考PRML变分推断这一章，其中讲到优化证据下界同时可以使KL散度为零，也就是说两种方法等价。但是不同的是，PRML和这里均是假设了一个所有变量的联合概率分布，而VAE和我说的那篇文章里假设的是一个条件概率分布，因此推导出来的结果很相似。我也不知道那种假设更加合理或者该如何选择，可能如作者说的很多工作有相似之处吧。希望各位有兴趣的话可以一起探讨。</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-12360">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第5层</span>
+            <span class="date">November 13th, 2019</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-12360">
+<p>联合分布本身由条件分布相乘得到</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-12367">
+        <div class="comment-header">
+            <span class="author">塔奇克马</span>
+            <span class="layer reply">第6层</span>
+            <span class="date">November 14th, 2019</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-12367">
+<p>道理是这么个道理，您这里优化的是q(x,y,z)并分解成了q(x|z)q(z|y)q(y)，那篇文章中优化的是q(y,z|x)并分解成了q(y|x)q(z|x)，因此两种不同的分解意味着不同的模型。</p> 
+</div>
+        </div>
+    </div>
+</div>
+<div class="comment-thread">
+    <div class="comment" id="comment-11345">
+        <div class="comment-header">
+            <span class="author">阿姨的卡布奇洛</span>
+            <span class="layer">第2层</span>
+            <span class="date">June 9th, 2019</span>
+        </div>
+        <div class="comment-content">
+            <div class="ListContent" id="comment-11345">
+<p>请问博主的这篇的想法是原创的，还是有借鉴其他论文，如果有其他论文能否给个参考。</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-11347">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第3层</span>
+            <span class="date">June 9th, 2019</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-11347">
+<p>本文是自己独立构思的，至于有没有类似工作，我不是很了解。</p> 
+</div>
+        </div>
+    </div>
+</div>
+<div class="comment-thread">
+    <div class="comment" id="comment-11380">
+        <div class="comment-header">
+            <span class="author">jqwylb</span>
+            <span class="layer">第3层</span>
+            <span class="date">June 17th, 2019</span>
+        </div>
+        <div class="comment-content">
+            <div class="ListContent" id="comment-11380">
+<p>博主您好，读完您的博文收益很深，您在最后总结的时候，提到“式(4)只是式(2)的一个例子，还可以考虑更加一般的情况”，这个一般情况可以从哪些地方考虑呢，希望您能指点一下。</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-11387">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第4层</span>
+            <span class="date">June 18th, 2019</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-11387">
+<p>比如$q(x|z)$意味着生成$x$的时候只用到了$z$，你可以考虑一般化的$q(x|z, y)$，即同时传入$z,y$来生成$x$。</p> 
+</div>
+        </div>
+    </div>
+</div>
+<div class="comment-thread">
+    <div class="comment" id="comment-11820">
+        <div class="comment-header">
+            <span class="author">wq</span>
+            <span class="layer">第4层</span>
+            <span class="date">August 14th, 2019</span>
+        </div>
+        <div class="comment-content">
+            <div class="ListContent" id="comment-11820">
+<p>苏神您好，我有几个问题想请教您：<br/>
+1.像公式(2)推导到公式(4)是怎么来的呢，有什么资料可以参考吗？<br/>
+2.通过概率这种推导后，怎么转换到实际的编成呢？也就是怎么把最后的损失转换为我们可以计算的损失函数呢？<br/>
+个人总感觉理论推导到实例化有很大的隔阂，而且很多书籍也没有提供这样的转换的类似参考，希望苏神能够指点一二，或者提供一些相应的参考资料。</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-11828">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第5层</span>
+            <span class="date">August 15th, 2019</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-11828">
+<p>1、(2)到(4)是举例，不是推导；也就是说(4)是(2)的一个更具体的例子罢了；<br/>
+2、你需要清晰知道模型对应的数学公式，并且需要清晰知道（常见的）数学公式用框架怎么写出来；这是一个慢慢累积的过程，没有什么现成的参考资料。</p> 
+</div>
+        </div>
+    </div>
+</div>
+<div class="comment-thread">
+    <div class="comment" id="comment-11888">
+        <div class="comment-header">
+            <span class="author">Wp</span>
+            <span class="layer">第5层</span>
+            <span class="date">August 31st, 2019</span>
+        </div>
+        <div class="comment-content">
+            <div class="ListContent" id="comment-11888">
+<p>您好苏神，很感激您的工作。</p><p>请问能否具体解释一下【具体模型】一节，为什么loss2和loss3有那样的含义呢？</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-11890">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第6层</span>
+            <span class="date">August 31st, 2019</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-11890">
+<p>不知道你想表达什么意思，什么叫做“为什么loss2和loss3有那样的含义”？</p> 
+</div>
+        </div>
+    </div>
+</div>
+<div class="comment-thread">
+    <div class="comment" id="comment-12112">
+        <div class="comment-header">
+            <span class="author">king</span>
+            <span class="layer">第6层</span>
+            <span class="date">October 6th, 2019</span>
+        </div>
+        <div class="comment-content">
+            <div class="ListContent" id="comment-12112">
+<p>right = 0.<br/>
+for i in range(10):<br/>
+_ = np.bincount(y_train_[y_train_pred == i])<br/>
+right += _.max()<br/>
+这段统计的代码是不是有问题，不太对啊？</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-12127">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第7层</span>
+            <span class="date">October 7th, 2019</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-12127">
+<p>有什么问题？</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-12129">
+        <div class="comment-header">
+            <span class="author">king</span>
+            <span class="layer reply">第8层</span>
+            <span class="date">October 7th, 2019</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-12129">
+<p>这个是我搞错了</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-12130">
+        <div class="comment-header">
+            <span class="author">king</span>
+            <span class="layer reply">第8层</span>
+            <span class="date">October 7th, 2019</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-12130">
+<p><a href="https://spaces.ac.cn/archives/5887/comment-page-2#comment-12127">@苏剑林|comment-12127</a></p><p># 定义损失函数<br/>
+z_mean = tf.expand_dims(z_mean, 1)<br/>
+z_log_var = tf.expand_dims(z_log_var, 1)<br/>
+lamb = 2.5  # 这是重构误差的权重，它的相反数就是重构方差，越大意味着方差越小。<br/>
+xent_loss = 0.5 * tf.reduce_mean((x - x_recon) ** 2, 0)<br/>
+kl_loss = - 0.5 * (z_log_var - tf.square(z_prior_mean))<br/>
+kl_loss = tf.reduce_mean(tf.matmul(tf.expand_dims(y, 1), kl_loss), 0)<br/>
+cat_loss = tf.reduce_mean(y * tf.log(y + _EPSILON), 0)<br/>
+vae_loss = lamb * tf.reduce_sum(xent_loss) + tf.reduce_sum(kl_loss) + tf.reduce_sum(cat_loss)<br/>
+这个没有看太懂，是如何和公式（5）对应的呢？</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-12134">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第9层</span>
+            <span class="date">October 7th, 2019</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-12134">
+<p>这似乎不是我写的吧？</p><p>至于怎么对应，就是按文中解释的对应。</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-12136">
+        <div class="comment-header">
+            <span class="author">king</span>
+            <span class="layer reply">第10层</span>
+            <span class="date">October 7th, 2019</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-12136">
+<p>这个是您原始代码里拿到的，我理解这里面cat_loss是对应的公式5中KL(p(y|z)||q(y))吧，xent_loss是−loq(x|z)，kl_loss对应的是中间您推到的那部分吧<br/>
+原始代码如下：<br/>
+# 建立模型<br/>
+vae = Model(x, [x_recon, z_prior_mean, y])</p><p># 下面一大通都是为了定义loss<br/>
+z_mean = K.expand_dims(z_mean, 1)<br/>
+z_log_var = K.expand_dims(z_log_var, 1)</p><p>lamb = 2.5 # 这是重构误差的权重，它的相反数就是重构方差，越大意味着方差越小。<br/>
+xent_loss = 0.5 * K.mean((x - x_recon)**2, 0)<br/>
+kl_loss = - 0.5 * (z_log_var - K.square(z_prior_mean))<br/>
+kl_loss = K.mean(K.batch_dot(K.expand_dims(y, 1), kl_loss), 0)<br/>
+cat_loss = K.mean(y * K.log(y + K.epsilon()), 0)<br/>
+vae_loss = lamb * K.sum(xent_loss) + K.sum(kl_loss) + K.sum(cat_loss)</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-12146">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第11层</span>
+            <span class="date">October 8th, 2019</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-12146">
+<p>是的。并且该解释的在文章中已经解释了，剩下的还看不懂的话，则需要先补习vae的相关内容。</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-12139">
+        <div class="comment-header">
+            <span class="author">king</span>
+            <span class="layer reply">第10层</span>
+            <span class="date">October 8th, 2019</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-12139">
+<p># 重参数层，相当于给输入加入噪声<br/>
+z = Lambda(sampling, output_shape=(latent_dim,))([z_mean, z_log_var])<br/>
+x_recon = decoder(z)<br/>
+y = classfier(z)<br/>
+再请教您一个问题，如上面原始代码所述，就是关于代码中x_recon是直接从decoder(z)得到的，而进行decoder的z并不由 y得到的q(z|y)，为什么不写成经过q(z|y)得到的呢？</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-12147">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第11层</span>
+            <span class="date">October 8th, 2019</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-12147">
+<p>该怎么做怎么写，不是拍脑袋而来的，而是根据公式$(5)\sim (8)$决定的。</p> 
+</div>
+        </div>
+    </div>
+</div>
+<div class="comment-thread">
+    <div class="comment" id="comment-12145">
+        <div class="comment-header">
+            <span class="author">你是太阳zZ</span>
+            <span class="layer">第7层</span>
+            <span class="date">October 8th, 2019</span>
+        </div>
+        <div class="comment-content">
+            <div class="ListContent" id="comment-12145">
+<p>你好，请问涉及到聚类时，是怎么对y进行约束，从而使聚类效果更好呢？</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-12151">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第8层</span>
+            <span class="date">October 8th, 2019</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-12151">
+<p>什么样的约束？</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-12153">
+        <div class="comment-header">
+            <span class="author">你是太阳zZ</span>
+            <span class="layer reply">第9层</span>
+            <span class="date">October 9th, 2019</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-12153">
+<p>请问整个实现过程怎么使聚类效果更好呢？</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-12157">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第10层</span>
+            <span class="date">October 9th, 2019</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-12157">
+<p>模型自己学会聚类，不用人工过多干扰聚类过程。如果要说聚类的依据是什么，那应该是最大似然吧。</p> 
+</div>
+        </div>
+    </div>
+</div>
+<div class="comment-thread">
+    <div class="comment" id="comment-12160">
+        <div class="comment-header">
+            <span class="author">你是太阳zZ</span>
+            <span class="layer">第8层</span>
+            <span class="date">October 10th, 2019</span>
+        </div>
+        <div class="comment-content">
+            <div class="ListContent" id="comment-12160">
+<p>请问如何在目标函数中体现聚类的目标？</p> 
+</div>
+        </div>
+    </div>
+</div>
+<div class="comment-thread">
+    <div class="comment" id="comment-12420">
+        <div class="comment-header">
+            <span class="author">杜筱汐</span>
+            <span class="layer">第9层</span>
+            <span class="date">November 21st, 2019</span>
+        </div>
+        <div class="comment-content">
+            <div class="ListContent" id="comment-12420">
+<p>你好，我想问问文章中提到的vae_keras_cluster.py代码我运行不出来呀,总是报错，好像是acc没有定义是吗，可以看下运行的结果截图吗</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-12423">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第10层</span>
+            <span class="date">November 22nd, 2019</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-12423">
+<p>请先完全对齐各个软件版本再说。</p> 
+</div>
+        </div>
+    </div>
+</div>
+<div class="comment-thread">
+    <div class="comment" id="comment-12671">
+        <div class="comment-header">
+            <span class="author">陆心之海</span>
+            <span class="layer">第10层</span>
+            <span class="date">December 24th, 2019</span>
+        </div>
+        <div class="comment-content">
+            <div class="ListContent" id="comment-12671">
+<p>大神，您好，读了您写的VAE系列博客，受益匪浅，想请教本文中式（5）作为式（4）的一个具体实现，是如何得到的，能否进行详细的解释说明，十分感谢您的分享。</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-12673">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第11层</span>
+            <span class="date">December 25th, 2019</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-12673">
+<p>理解VAE以及本文$(4)$式的基础上，$(5)$式就是显然成立的，不能再详细了，因为它跟$(4)$式是一模一样的，甚至连变换都没有变换过。</p> 
+</div>
+        </div>
+    </div>
+</div>
+<div class="comment-thread">
+    <div class="comment" id="comment-12674">
+        <div class="comment-header">
+            <span class="author">cgr</span>
+            <span class="layer">楼主</span>
+            <span class="date">December 25th, 2019</span>
+        </div>
+        <div class="comment-content">
+            <div class="ListContent" id="comment-12674">
+<p>里面涉及到了分类器，聚类过程中使用分类可以吗？这样就不是传统意义上的分类了吗？</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply" id="comment-12675">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第2层</span>
+            <span class="date">December 26th, 2019</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-12675">
+<p>不知道你想表达的意思是什么？什么叫做“聚类过程中使用分类”？聚类不就是无监督地将数据归类么？还在乎用什么方法？</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-12676">
+        <div class="comment-header">
+            <span class="author">cgr</span>
+            <span class="layer reply">第3层</span>
+            <span class="date">December 26th, 2019</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-12676">
+<p>我看见代码vae = Model(x, [x_recon, z_prior_mean, y])中有个y，y是由分类器创建的，这个不就等于是三个loss中有了分类器的loss，分类器都是有监督的训练，这个模型出现了分类器，聚类等于是有用到分类标签的过程</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-12703">
+        <div class="comment-header">
+            <span class="author">jqwylb</span>
+            <span class="layer reply">第4层</span>
+            <span class="date">December 31st, 2019</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-12703">
+<p>可以仔细看一下代码，并没有用到标签，虽然名字是classifier，但是loss是无监督的，没有标签的参与，根据推导出的loss，softmax层的输出就是聚类标签</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-12704">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第4层</span>
+            <span class="date">December 31st, 2019</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-12704">
+<p>哪条法律规定分类器就一定是有监督训练的呢？</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-14500">
+        <div class="comment-header">
+            <span class="author">kingdeewang</span>
+            <span class="layer reply">第5层</span>
+            <span class="date">October 7th, 2020</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-14500">
+<p>这种分类是指定分类的个数是10个，是对应正确的分类数。 是否可以理解这种为半监督的训练，因为在实际场景中有时候都不知道实际的分类个数？</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-14511">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第6层</span>
+            <span class="date">October 9th, 2020</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-14511">
+<p>如果指定类别数目就叫做半监督，那么K-Means也叫做半监督吗？如果是，那也无所谓了，反正就是个名字罢了。</p><p>天下没有免费的午餐，任何算法都会有一定的超参数，聚类也是如此。有些聚类算法不需要指定类别数，但其实就是转化为了其他形式的超参数。</p> 
+</div>
+        </div>
+    </div>
+</div>
+<div class="comment-thread">
+    <div class="comment" id="comment-12899">
+        <div class="comment-header">
+            <span class="author">Dimaria</span>
+            <span class="layer">第2层</span>
+            <span class="date">February 23rd, 2020</span>
+        </div>
+        <div class="comment-content">
+            <div class="ListContent" id="comment-12899">
+<p>博主，我觉得这样得想法可以发文章了啊。有点可惜啊，虽然本质上的创新博主写出来了就不觉得什么了，但是单看5式这个loss函数是很新颖的，顶会很有戏啊</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-12902">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第3层</span>
+            <span class="date">February 24th, 2020</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-12902">
+<p>谢谢你的肯定。</p><p>不过，类似的想法好像已经写成过论文了，比如《Variational Deep Embedding:An Unsupervised and Generative Approach to Clustering》。此外，就算本文真有什么创新之处，不发顶会也不算什么可惜的事情呀，知识能为人知道并传播，就已经实现了它的价值。</p> 
+</div>
+        </div>
+    </div>
+</div>
+<div class="comment-thread">
+    <div class="comment" id="comment-13011">
+        <div class="comment-header">
+            <span class="author">高山仰止</span>
+            <span class="layer">第3层</span>
+            <span class="date">March 16th, 2020</span>
+        </div>
+        <div class="comment-content">
+            <div class="ListContent" id="comment-13011">
+<p>大神您好，请问公式(3)这种选取方案是怎么得到的？前两个公式p(z,y|x)=p(y|z) p(z|x), q(x|z,y)=q(x|z)是怎么得到的？是假设x与y之间有独立的关系吗？期待您的回复。</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-13012">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第4层</span>
+            <span class="date">March 16th, 2020</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-13012">
+<p>等式就是假设本身，不需要其他二次解释。</p><p>换句话说，就是假设$p(z,y|x)=p(y|z)p(z|x),\quad q(x|z,y)=q(x|z),\quad q(z,y)=q(z|y)q(y)$，而不是由其他假设得到这两个等式。</p> 
+</div>
+        </div>
+    </div>
+</div>
+<div class="comment-thread">
+    <div class="comment" id="comment-13019">
+        <div class="comment-header">
+            <span class="author">普楠</span>
+            <span class="layer">第4层</span>
+            <span class="date">March 16th, 2020</span>
+        </div>
+        <div class="comment-content">
+            <div class="ListContent" id="comment-13019">
+<p>苏老师您好，每次看您的文章都让我受益匪浅。请问如果我按照《Variational Deep Embedding:An Unsupervised and Generative Approach to Clustering》将潜变量假设为混合高斯，但是是在监督分类的任务中使用，且每个高斯Component对应一个类，那么我可以把VAE中KL（P(z|x)||N(0,1)）直接换成KL(p(z,c|x)||N($\mu_{c},\sigma_{c}$))吗？ 这也能推导得出类似 KL（P(z|x)||N(0,1)） 的一个 closed解吗？</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-13023">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第5层</span>
+            <span class="date">March 17th, 2020</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-13023">
+<p>试试不就行了？</p> 
+</div>
+        </div>
+    </div>
+</div>
+<div class="comment-thread">
+    <div class="comment" id="comment-14053">
+        <div class="comment-header">
+            <span class="author">洪晨</span>
+            <span class="layer">第5层</span>
+            <span class="date">August 12th, 2020</span>
+        </div>
+        <div class="comment-content">
+            <div class="ListContent" id="comment-14053">
+<p>您好，苏老师，您提到的q(z|y)是均值为uy,方差为1的正太分布，那这个uy是怎么得到呢？是从q(y)这个均匀分布采样一个值，然后这个值作为uy吗？</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-14063">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第6层</span>
+            <span class="date">August 14th, 2020</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-14063">
+<p>作为待优化参数让模型自己学习呀</p> 
+</div>
+        </div>
+    </div>
+</div>
+<div class="comment-thread">
+    <div class="comment" id="comment-14519">
+        <div class="comment-header">
+            <span class="author">kingdeewang</span>
+            <span class="layer">第6层</span>
+            <span class="date">October 9th, 2020</span>
+        </div>
+        <div class="comment-content">
+            <div class="ListContent" id="comment-14519">
+<p>请教一下，可以用这个做文本的聚类吗？ 生成模型 q(x|z)应该怎么选择？ 可以写成下面这样方式吗?                                                                                    z = Lambda(sampling, output_shape=(latent_dim,))([z_mean, z_log_var])<br/>
+x = Dense(latent_dim*maxlen,activation='relu')(z)<br/>
+x_recon = Dense(len(char2id), activation='softmax')(x)</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-14524">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第7层</span>
+            <span class="date">October 9th, 2020</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-14524">
+<p>不大好做，因为这个模型本质上是VAE的推广，而文本VAE模型本身就不好训练，更不用说自然地聚类了。</p> 
+</div>
+        </div>
+    </div>
+</div>
+<div class="comment-thread">
+    <div class="comment" id="comment-14562">
+        <div class="comment-header">
+            <span class="author">CCTreasure</span>
+            <span class="layer">第7层</span>
+            <span class="date">October 12th, 2020</span>
+        </div>
+        <div class="comment-content">
+            <div class="ListContent" id="comment-14562">
+<p>请问如果是做分类任务的话，是不是在现有的loss的基础上，额外增加一个对聚类结果p(y|z)的监督的loss就可以了呢？比如增加一个交叉熵作为loss，label是x的类别。</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-14566">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第8层</span>
+            <span class="date">October 14th, 2020</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-14566">
+<p>是的，可以这样做。</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-14570">
+        <div class="comment-header">
+            <span class="author">CCTreasure</span>
+            <span class="layer reply">第9层</span>
+            <span class="date">October 14th, 2020</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-14570">
+<p>谢谢！想再问一下除了额外加这么一个loss这样做之外还有别的方法吗？我暂时只能想到这一个，但是听起来应该还是有别的方法的？</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-14573">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第10层</span>
+            <span class="date">October 15th, 2020</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-14573">
+<p>其实也没有什么好方法了。可以试试无标签数据直接训练$(5)$，有标签数据则不算$p(y|z)$，直接把这一步用真实标签代替（也就是有标签数据不训练$p(y|z)$了，而是用真实标签训练$q(x|z),q(z|y),p(z|x)$）。</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-14580">
+        <div class="comment-header">
+            <span class="author">CCTreasure</span>
+            <span class="layer reply">第11层</span>
+            <span class="date">October 16th, 2020</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-14580">
+<p>好的，感谢！</p> 
+</div>
+        </div>
+    </div>
+</div>
+<div class="comment-thread">
+    <div class="comment" id="comment-14958">
+        <div class="comment-header">
+            <span class="author">ErickZhou</span>
+            <span class="layer">第8层</span>
+            <span class="date">December 4th, 2020</span>
+        </div>
+        <div class="comment-content">
+            <div class="ListContent" id="comment-14958">
+<p>苏老师，请教您几个问题。</p><p>我想用VAE来替代K-means聚类。我的数据只有700多个图，分为正常人和病人两类。请问用VAE是否可行? 因为我只是希望对全部数据聚类，替代kmeans聚类，是不是可以将全部数据就看成训练集，不用再分测试集？另外，我聚类时，两个类的数量不是均衡的，是否需要去掉公式（5）三项loss的最后一项？</p><p>谢谢。</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-14997">
+        <div class="comment-header">
+            <span class="author">ErickZhou</span>
+            <span class="layer reply">第9层</span>
+            <span class="date">December 10th, 2020</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-14997">
+<p>上面的问题请忽略，我想我应该知道答案了，谢谢</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-15007">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第10层</span>
+            <span class="date">December 10th, 2020</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-15007">
+<p>好的。</p> 
+</div>
+        </div>
+    </div>
+</div>
+<div class="comment-thread">
+    <div class="comment" id="comment-15309">
+        <div class="comment-header">
+            <span class="author">ErickZhou</span>
+            <span class="layer">第9层</span>
+            <span class="date">January 21st, 2021</span>
+        </div>
+        <div class="comment-content">
+            <div class="ListContent" id="comment-15309">
+<p>苏老师，我用你提供的方法进行聚类。输入数据是正常人和病人的脑功能连接矩阵（每个矩阵大小112*112)，训练集有2万多个脑功能连接矩阵（病人数稍微多于正常人），验证集有750个脑功能连接矩阵（病人数稍微多于正常人）。我直接用了您的模型，模型方面我就修改了num_classes = 2<br/>
+img_dim = 112，其他部分都没有改。我现在用您的方法得到的聚类正确率只有50%多，请问我应该从哪里找原因?</p><p>现在我能想到的一个原因是病人和正常人的脑功能连接矩阵有较大的相似性，只有部分位置存在差异。现在我是把整个矩阵输入到您的这个代码中的。</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-15313">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第10层</span>
+            <span class="date">January 21st, 2021</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-15313">
+<p>我也不清楚，具体例子具体分析吧。</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-15331">
+        <div class="comment-header">
+            <span class="author">ErickZhou</span>
+            <span class="layer reply">第11层</span>
+            <span class="date">January 21st, 2021</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-15331">
+<p>苏老师，请问您，您模型中的那些参数，包括卷积滤波器filters个数，模型层数怎么设置，和数据量大小等有什么关系，关于设置这些参数，您有没有推荐的资料？我刚刚开始做机器学习方面的工作，对这方面了解很少，谢谢您。</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-15339">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第12层</span>
+            <span class="date">January 22nd, 2021</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-15339">
+<p>没有，你可能需要好好入门一段时间再来做应用。</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-15343">
+        <div class="comment-header">
+            <span class="author">ErickZhou</span>
+            <span class="layer reply">第13层</span>
+            <span class="date">January 22nd, 2021</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-15343">
+<p>谢谢您的回复，您能否推荐一些入门资料，不好意思，麻烦您了</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-15349">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第14层</span>
+            <span class="date">January 23rd, 2021</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-15349">
+<p>你可以按时间顺序来阅读本博客文章。其他资料我也没有了。</p> 
+</div>
+        </div>
+    </div>
+</div>
+<div class="comment-thread">
+    <div class="comment" id="comment-15421">
+        <div class="comment-header">
+            <span class="author">ErickZhou</span>
+            <span class="layer">第10层</span>
+            <span class="date">January 29th, 2021</span>
+        </div>
+        <div class="comment-content">
+            <div class="ListContent" id="comment-15421">
+<p>苏老师，关于loss的问题向您请教。<br/>
+1.您的代码中：lamb = 2.5 # 这是重构误差的权重，它的相反数就是重构方差，越大意味着方差越小。请问这个lamb值的选择有什么依据，是从图像数据中估计出来的吗？<br/>
+2.xent_loss，kl_loss，cat_loss这3个loss最终要达到大概什么样的比例，聚类的效果会好？</p><p>请您指点一二，谢谢</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-15422">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第11层</span>
+            <span class="date">January 29th, 2021</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-15422">
+<p>1、拍脑袋调的；<br/>
+2、理论上总的loss越小越好。</p> 
+</div>
+        </div>
+    </div>
+</div>
+<div class="comment-thread">
+    <div class="comment" id="comment-15428">
+        <div class="comment-header">
+            <span class="author">ErickZhou</span>
+            <span class="layer">楼主</span>
+            <span class="date">January 31st, 2021</span>
+        </div>
+        <div class="comment-content">
+            <div class="ListContent" id="comment-15428">
+<p>苏老师，又来麻烦您，请教您一个问题。<br/>
+我参照您的那个基于多层感知机(MLP)的代码(vae_keras.py)以及您发的这篇文章对应的代码（vae_keras_cluster.py），修改成一个基于MLP的VAE聚类。我在您代码的编码和解码部分都加了一个Dense层，就像下面这样<br/>
+x = Input(shape=(original_dim,))<br/>
+h = Dense(intermediate_dim, activation='relu')(x)<br/>
+#加一层<br/>
+h = Dense(intermediate_dim, activation='relu')(h)</p><p>发现聚类准确率有71%。<br/>
+请问您<br/>
+1. Dense层的输入输出节点数是否要修改，比如您这里第一个Dense层输入original_dim，输出intermediate_dim。我是不是要选择比intermediate_dim更多的节点数。我新加的Dense层也是这个问题。<br/>
+2. 我是否还需要增加更多的Dense层以此提高聚类效果。还有是不是还需要dropout？</p><p>麻烦您了，谢谢您</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply" id="comment-15429">
+        <div class="comment-header">
+            <span class="author">ErickZhou</span>
+            <span class="layer reply">第2层</span>
+            <span class="date">February 1st, 2021</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-15429">
+<p>我在编码解码位置都增加2个dense层，<br/>
+#加2层<br/>
+h = Dense(intermediate_dim, activation='relu')(h)<br/>
+h = Dense(intermediate_dim, activation='relu')(h)</p><p>发现聚类准确率有78%<br/>
+如果增加3个Dense层，<br/>
+#加3层<br/>
+h = Dense(intermediate_dim, activation='relu')(h)<br/>
+h = Dense(intermediate_dim, activation='relu')(h)<br/>
+h = Dense(intermediate_dim, activation='relu')(h)<br/>
+聚类准确率下降到69%。</p><p>请问您对层数选择以及相关参数选择，有没有什么依据，谢谢您。</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-15433">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第3层</span>
+            <span class="date">February 1st, 2021</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-15433">
+<p>能跑通代码，那我的事情已经完成了。对于炼丹过程，我不提供参考意见。</p> 
+</div>
+        </div>
+    </div>
+</div>
+<div class="comment-thread">
+    <div class="comment" id="comment-15548">
+        <div class="comment-header">
+            <span class="author">ErickZhou</span>
+            <span class="layer">第2层</span>
+            <span class="date">February 12th, 2021</span>
+        </div>
+        <div class="comment-content">
+            <div class="ListContent" id="comment-15548">
+<p>祝福苏老师新年平安健康喜乐如意！ Happy 牛 Year!</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-15550">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第3层</span>
+            <span class="date">February 12th, 2021</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-15550">
+<p>谢谢！同祝同乐～</p> 
+</div>
+        </div>
+    </div>
+</div>
+<div class="comment-thread">
+    <div class="comment" id="comment-16221">
+        <div class="comment-header">
+            <span class="author">Mark-</span>
+            <span class="layer">第3层</span>
+            <span class="date">April 26th, 2021</span>
+        </div>
+        <div class="comment-content">
+            <div class="ListContent" id="comment-16221">
+<p>苏老师您好，请问一下latent_dim的选取有什么规则吗？</p> 
+</div>
+        </div>
+    </div>
+</div>
+<div class="comment-thread">
+    <div class="comment" id="comment-16654">
+        <div class="comment-header">
+            <span class="author">susu</span>
+            <span class="layer">第4层</span>
+            <span class="date">June 17th, 2021</span>
+        </div>
+        <div class="comment-content">
+            <div class="ListContent" id="comment-16654">
+<p>苏老师，想问一下从隐藏变量latent feature中提取的可以直接用来表示原始数据吗？原有数据标签还有意义吗？可以照常使用吗？</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-16661">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第5层</span>
+            <span class="date">June 18th, 2021</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-16661">
+<p>这不就取决于重构loss的大小吗？重构loss足够小，那么隐变量就相当于原始数据。</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-16689">
+        <div class="comment-header">
+            <span class="author">susu</span>
+            <span class="layer reply">第6层</span>
+            <span class="date">June 21st, 2021</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-16689">
+<p>苏老师，这个重构loss我能理解，主要是不太知道那个隐变量好像有一个随机采样，那采样前后和能直接用原始数据的标签吗？不用隐变量解码数据而是直接用隐变量画图。<br/>
+感谢苏老师的解答！</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-16693">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第7层</span>
+            <span class="date">June 21st, 2021</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-16693">
+<p>你要分析采样前后的变量，那就要用到概率分布的语言，而不是单纯地“拍板”能还是不能。</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-16695">
+        <div class="comment-header">
+            <span class="author">susu</span>
+            <span class="layer reply">第8层</span>
+            <span class="date">June 21st, 2021</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-16695">
+<p>好的！了解了，谢谢苏老师！</p> 
+</div>
+        </div>
+    </div>
+</div>
+<div class="comment-thread">
+    <div class="comment" id="comment-16802">
+        <div class="comment-header">
+            <span class="author">yxnchen</span>
+            <span class="layer">第5层</span>
+            <span class="date">July 1st, 2021</span>
+        </div>
+        <div class="comment-content">
+            <div class="ListContent" id="comment-16802">
+<p>有一个问题，文章说生成过程：从分布$q(y)$中选取一个类别$y$，然后从分布$q(z|y)$中选取一个随机隐变量$z$，然后通过生成器$q(x|z)$解码为原始样本。</p><p>但是代码中，生成过程是：<br/>
+z = Lambda(sampling, output_shape=(latent_dim,))([z_mean, z_log_var])<br/>
+x_recon = decoder(z)<br/>
+这里的解码器的$z$直接用了编码器重采样的结果，不是应该有一个从$y$到$z$的过程再输入解码器？</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-16804">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第6层</span>
+            <span class="date">July 1st, 2021</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-16804">
+<p>这说的是随机采样过程，不是训练过程，训练过程不是随机采样，训练过程请认真理解$(5)$式。</p> 
+</div>
+        </div>
+    </div>
+</div>
+<div class="comment-thread">
+    <div class="comment" id="comment-17916">
+        <div class="comment-header">
+            <span class="author">malaccn</span>
+            <span class="layer">第6层</span>
+            <span class="date">November 29th, 2021</span>
+        </div>
+        <div class="comment-content">
+            <div class="ListContent" id="comment-17916">
+<p>苏老师，这儿有点困惑 cat_loss = K.mean(y * K.log(y + K.epsilon()), 0) 分类损失怎么自己跟自己的交叉熵?</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-17918">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第7层</span>
+            <span class="date">November 29th, 2021</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-17918">
+<p>一切按照公式实现。</p> 
+</div>
+        </div>
+    </div>
+</div>
+<div class="comment-thread">
+    <div class="comment" id="comment-17917">
+        <div class="comment-header">
+            <span class="author">malaccn</span>
+            <span class="layer">第7层</span>
+            <span class="date">November 29th, 2021</span>
+        </div>
+        <div class="comment-content">
+            <div class="ListContent" id="comment-17917">
+<p>哦，好像想明白了，是信息熵越小，分类越确定吧。</p> 
+</div>
+        </div>
+    </div>
+</div>
+<div class="comment-thread">
+    <div class="comment" id="comment-19831">
+        <div class="comment-header">
+            <span class="author">kkk</span>
+            <span class="layer">第8层</span>
+            <span class="date">September 16th, 2022</span>
+        </div>
+        <div class="comment-content">
+            <div class="ListContent" id="comment-19831">
+<p>很感谢您的文章。写得非常清楚，但是我还是有点不太明白，所以想请问一下：</p><p>1、文章中提到【∑yp(y|z)logp(z|x)q(z|y)希望z能尽量对齐某个类别的“专属”的正态分布。】为什么这个loss有这个效果呢，如何去理解。</p><p>2、文章中提到【KL(p(y|z)‖‖q(y))希望每个类的分布尽量均衡，不会发生两个几乎重合的情况（坍缩为一个类）。】 这一项loss是希望p(y|z)接近均匀分布q(y), 也就是z和y无关。因为聚类是希望建立起z和y的关系，这一项loss是不是和聚类目标冲突呢？</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-19844">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第9层</span>
+            <span class="date">September 19th, 2022</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-19844">
+<p>1、最后化简我们得到$(8)$，从它的形式可以看出它希望$z$向某个$\mu_y$看齐；或者我们也可以不严谨地将它看成<br/>
+$$\sum_y p(y|z) KL(p(z|x)\Vert q(z|y))$$<br/>
+这也显示出它希望$p(z|x)$跟某个$q(z|y)$接近（这样loss才能尽量接近于0）</p><p>2、所有loss是一同优化的，拆开来看只是为了分析它的大致优化方向，并不是说其他项loss就不存在了，所以有其他loss存在，就不存在冲突的说法。</p> 
+</div>
+        </div>
+    </div>
+</div>
+<div class="comment-thread">
+    <div class="comment" id="comment-20635">
+        <div class="comment-header">
+            <span class="author">梧桐雨</span>
+            <span class="layer">第9层</span>
+            <span class="date">December 25th, 2022</span>
+        </div>
+        <div class="comment-content">
+            <div class="ListContent" id="comment-20635">
+<p>拜读了苏神的VAE系里文章，受益匪浅。只是对于这个地方有一些疑惑。</p><p>按照我的理解，加上隐含变量$z$后，这一项应该为<br/>
+\[<br/>
+\mathbb{E}_{x\sim \tilde{p}(x)}\left[\sum_{y} \int_z p(y|z)p(z|x) \ln\left(\frac{p(z|x)}{q(z|y)} \right) dz \right]<br/>
+\]<br/>
+注意到$p(y|z)$中含有变量$z$，所以积分$\int_z $应该不能移到$p(y|z)$后面，所以应该不能得到$KL(p(z|x) || q(z|y))$。</p><p>还望苏神能解答上面疑惑。</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-20659">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第10层</span>
+            <span class="date">December 28th, 2022</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-20659">
+<p>我看了看正文，似乎没出现过$KL(p(z|x)\Vert q(z|y))$。你是不是指<a href="https://spaces.ac.cn/archives/5887/comment-page-4#comment-19844">@苏剑林|comment-19844</a>这里的评论？这里确实有些不严谨，我修改一下。</p> 
+</div>
+        </div>
+    </div>
+</div>
+<div class="comment-thread">
+    <div class="comment" id="comment-22556">
+        <div class="comment-header">
+            <span class="author">李俊雄</span>
+            <span class="layer">第10层</span>
+            <span class="date">August 23rd, 2023</span>
+        </div>
+        <div class="comment-content">
+            <div class="ListContent" id="comment-22556">
+<p>苏老师，您好，看了您的代码和文章有个问题很想问您：</p><p>1、文中公式(8)中1/2*||z−μy||^2，这一项按理说不应该是z的每个样本去减专属于这个样本所对应的类的均值μy吗？<br/>
+2、但是在代码里我看到的是“z - K.expand_dims(self.mean, 0)”，这里z的shape是(batch_size, 1, latent_dim)，self.mean的shape是(1, num_classes, latent_dim)，类似于pytorch的广播机制，z会复制变成shape是(batch_size,num_classes, latent_dim)，self.mean同理也是，再进行相减。这样相减出来的张量表示的意思岂不是，表示每个样本与每个类别的均值之间的差吗？？这和公式(8)的意思不是不一致吗？而且我不知道求一个样本和不属于这个样本的类的均值之间作差有什么意义？</p><p>希望苏老师能解答一下我的疑惑，不甚感激。</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-22557">
+        <div class="comment-header">
+            <span class="author">李俊雄</span>
+            <span class="layer reply">第11层</span>
+            <span class="date">August 23rd, 2023</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-22557">
+<p>还是说一切按照公式执行</p> 
+</div>
+        </div>
+    </div>
+</div>
+<div class="comment-thread">
+    <div class="comment" id="comment-22559">
+        <div class="comment-header">
+            <span class="author">李俊雄</span>
+            <span class="layer">楼主</span>
+            <span class="date">August 24th, 2023</span>
+        </div>
+        <div class="comment-content">
+            <div class="ListContent" id="comment-22559">
+<p>苏老师，怎么理解q(y)是一个均匀分布呢？</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply" id="comment-22575">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第2层</span>
+            <span class="date">August 25th, 2023</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-22575">
+<p>均匀分布的概率就是常数。</p> 
+</div>
+        </div>
+    </div>
+</div>
+<div class="comment-thread">
+    <div class="comment" id="comment-22579">
+        <div class="comment-header">
+            <span class="author">李俊雄</span>
+            <span class="layer">第2层</span>
+            <span class="date">August 26th, 2023</span>
+        </div>
+        <div class="comment-content">
+            <div class="ListContent" id="comment-22579">
+<p>苏老师，glow是否也可以像您这篇文章说的做聚类，似乎可以，但不知从何入手？</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-22588">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第3层</span>
+            <span class="date">August 28th, 2023</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-22588">
+<p>很难。因为flow-based模型做的是精确的最大似然，而如果用来做聚类的话，相当于要最大化$\log \sum_y q(x|y)q(y)$，看上去是难以优化的。</p> 
+</div>
+        </div>
+    </div>
+</div>
+<div class="comment-thread">
+    <div class="comment" id="comment-22602">
+        <div class="comment-header">
+            <span class="author">李俊雄</span>
+            <span class="layer">第3层</span>
+            <span class="date">August 29th, 2023</span>
+        </div>
+        <div class="comment-content">
+            <div class="ListContent" id="comment-22602">
+<p>苏老师，我想做一个具有监督分类功能的glow，我能不能这么做：<br/>
+用最终的z去输入进一个softmax分类器，得到模型的预测分类类别y，这个y一边我使用真实标签通过交叉熵损失做为有监督的分类指导，一方面我设置10个mu,sigma（minist数据集），并设置为可训练的参数，每个样本我都用y去选择这个样本对应的编码向量z的先验分布的均值和方差，也就是在刚才说的那10个（mu,sigma）之中选，这样的优化策略是为了是为了使我的glow具有条件生成功能的同时，还具有分类的功能。不知道这种方案行不行...（担心自己没有说清楚自己的困惑，但已经很努力的表达了...）</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-22617">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第4层</span>
+            <span class="date">August 31st, 2023</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-22617">
+<p>你设置10个均值方差的时候，就已经相当于在训练条件生成模型$p(x|y)$，有了$p(x|y)$，根据贝叶斯公式就可以求出$p(y|x)$，似乎不用另外训练分类器。当然你这样另外训练分类器大概率也是可行的。</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-22628">
+        <div class="comment-header">
+            <span class="author">李俊雄</span>
+            <span class="layer reply">第5层</span>
+            <span class="date">September 1st, 2023</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-22628">
+<p>谢谢苏老师，已经实现了</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-22701">
+        <div class="comment-header">
+            <span class="author">李俊雄</span>
+            <span class="layer reply">第5层</span>
+            <span class="date">September 11th, 2023</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-22701">
+<p>苏老师，您说的根据贝叶斯公式求出p(y|x)，具体怎么做呢？能点拨一下吗？我发现另外训练分类器有点受局限。</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-22718">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第6层</span>
+            <span class="date">September 14th, 2023</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-22718">
+<p>$p(y|x)=\frac{p(x|y)p(y)}{p(x)}\propto p(x|y)p(y)$，通过统计求出$y$的分布$p(y)$，$p(x|y)$则可以通过条件生成模型算出，于是可以归一化求出$p(y|x)$。代价是计算量比较大，有多少个$y$就是要计算多少次$p(x|y)$。</p> 
+</div>
+        </div>
+    </div>
+</div>
+<div class="comment-thread">
+    <div class="comment" id="comment-24000">
+        <div class="comment-header">
+            <span class="author">wwz</span>
+            <span class="layer">第4层</span>
+            <span class="date">March 22nd, 2024</span>
+        </div>
+        <div class="comment-content">
+            <div class="ListContent" id="comment-24000">
+<p>苏老师您好！非常感谢您精彩的论文，我还是有些难以理解3式的获取方式，3式中最后一个可以理解为条件概率，但前两个式子似乎没有直接的对应关系，望苏老师解惑！</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-24015">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第5层</span>
+            <span class="date">March 27th, 2024</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-24015">
+<p>前两个式子不是恒等式啊，它是假设，是将左边的式子假设为右边的形式。</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-24025">
+        <div class="comment-header">
+            <span class="author">wwz</span>
+            <span class="layer reply">第6层</span>
+            <span class="date">March 27th, 2024</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-24025">
+<p>可能是我思维太局限了，总感觉不能直接推出来的就不会成立。</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-24058">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第7层</span>
+            <span class="date">April 3rd, 2024</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-24058">
+<p>比如$p(z,y|x)=p(y|z,x)p(z|x)$是恒成立的，$p(z,y|x)=p(y|z)p(z|x)$意味着假设$p(y|z,x)=p(y|z)$，即给定$z$的情况下，$y$不依赖于$x$。</p> 
+</div>
+        </div>
+    </div>
+</div>
+<div class="comment-thread">
+    <div class="comment" id="comment-24027">
+        <div class="comment-header">
+            <span class="author">liaowx</span>
+            <span class="layer">第5层</span>
+            <span class="date">March 28th, 2024</span>
+        </div>
+        <div class="comment-content">
+            <div class="ListContent" id="comment-24027">
+<p>如何理解：∑yp(y|z)logp(z|x)q(z|y) 表示 “希望z能尽量对齐某个类别的“专属”的正态分布”？</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-24061">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第6层</span>
+            <span class="date">April 3rd, 2024</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-24061">
+<p>在重参数之前，这一项是：<br/>
+$$\mathbb{E}_{x\sim \tilde{p}(x)}\left[\sum_y \int p(y|z)p(z|x)\ln \frac{p(z|x)}{q(z|y)} dz\right] = \mathbb{E}_{x\sim \tilde{p}(x)}\left[\sum_y p(y|z) KL\big(p(z|x)\big\Vert q(z|y)\big)\right]$$</p><p>让这一项足够小的方式是：1、$p(y|z)$足够接近one hot（即$y$接近确定性）；2、$KL\big(p(z|x)\big\Vert q(z|y)$足够接近于0，这意味着$p(z|x)\approx q(z|y)$，即$z$几乎只跟某个$y$有关了（即接近$y$的聚类中心）。</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-24639">
+        <div class="comment-header">
+            <span class="author">两个小问题，恳请苏神回答</span>
+            <span class="layer reply">第7层</span>
+            <span class="date">June 30th, 2024</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-24639">
+<p>苏神，对于您的解答，我有两个小问题<br/>
+1. 公式中将 $p(y|z)$ 提取到对 $z$ 的积分外，是否合理？也就是说，为什么下面的公式成立？<br/>
+$$<br/>
+\begin{aligned}<br/>
+\mathbb{E}_{x \sim \tilde{p}(x)}\left[\sum_y \int p(y | z) p(z  |x) \ln \frac{p(z| x)}{q(z| y)} d z\right]&amp;=\mathbb{E}_{x \sim \tilde{p}(x)}\left[\sum_y p(y |z) K L(p(z |x) \| q(z | y))\right]\\<br/>
+&amp;= \mathbb{E}_{x \sim \tilde{p}(x)}\left[\sum_y p(y | z) \int p(z|x) \ln \frac{p(z|x)}{q(z|y)} dz\right]<br/>
+\end{aligned}<br/>
+$$<br/>
+2. 假定 KL 散度接近零，为什么 p(y|z) 足够接近 one hot 时，这一项才足够小？</p><p>当然，如果这样理解的话，好像又行得通了：在 $p(y|z)$ 足够接近 one hot 时，上式成立，此时如果 KL 散度接近零，这一项就足够小了。</p><p>但这样又引入了新的问题，即如果其它解也能使该项 loss 降得很低，模型为什么一定会优化到 $p(y|z) \in \{0, 1\}$ 和 $p(z|x) \approx q(z|y)$ 呢？</p><p>求苏神赐教~</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-24658">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第8层</span>
+            <span class="date">July 2nd, 2024</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-24658">
+<p>这里你说的是对的，前面的解释是我疏忽了。</p><p>那我们可以直接看$(5)$和$(8)$，$(8)$中出现了$\Vert z - \mu_y\Vert^2$这一项，它倾向于让$z$对齐某个聚类中心，而$z$对齐聚类中心后，$p(y|z)$应该能尽量准确预测出对应的类别$y$，才能使得它求和的时候尽量命中了包含最小化$\Vert z - \mu_y\Vert^2$的那一项，从而达到最小化。</p><p>大致就是这样理解吧。从理论上来说，确实不能保证解唯一，但是SGD通常会“赢者通吃”，也就是说，如果开始阶段某个$y$对应的$\Vert z - \mu_y\Vert^2$这一项是所有$y$中最小的，那么后面通常会尽量最小化这一项（小的更小），所以迫使它倾向于聚类的解。</p> 
+</div>
+        </div>
+    </div>
+</div>
+<div class="comment-thread">
+    <div class="comment" id="comment-24289">
+        <div class="comment-header">
+            <span class="author">ITO</span>
+            <span class="layer">第6层</span>
+            <span class="date">May 12th, 2024</span>
+        </div>
+        <div class="comment-content">
+            <div class="ListContent" id="comment-24289">
+<p>苏神，(3)式中的假设<br/>
+$$p(z,y|x)=p(y|z)p(z|x)$$<br/>
+是否不太合适？因为它等价于$p(y|z)=p(y|z,x)$，进而等价于$p(y,x|z)=p(y|z)p(x|z)$，也就是在已知编码$z$时，$x$和它的类别$y$是独立的。这样的假设不会和最终目标：编码$x$为$z$, 然后对$z$做聚类得到类别$y$ 发生冲突吗？</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-24308">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第7层</span>
+            <span class="date">May 13th, 2024</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-24308">
+<p>假如$z$是一只猫的latent，$p(y|z)$预测$z$对应的类别是$y$，假设预测是准确的，那么$y$的有效值只有一个，那么就是“猫”；$p(x|z)$预测的是$z$对应的原始图片，猫的图片有无穷无尽。</p><p>相当于说，在给定$z$时，$y$就是“猫”这个类别，$x$则是无穷无尽的猫图，它们之间确实是独立的？</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-24342">
+        <div class="comment-header">
+            <span class="author">ITO</span>
+            <span class="layer reply">第8层</span>
+            <span class="date">May 15th, 2024</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-24342">
+<p>刚意识到我问了一个愚蠢的问题，从概率图的角度看，过程$x\xrightarrow{\text{编码}} z\xrightarrow{\text{预测}}y$本就暗含假设：$x$与$y$关于$z$条件独立，也就是说这个假设是必需的。感谢您的解释！</p> 
+</div>
+        </div>
+    </div>
+</div>
+<div class="comment-thread">
+    <div class="comment" id="comment-24986">
+        <div class="comment-header">
+            <span class="author">Insomnia24</span>
+            <span class="layer">第7层</span>
+            <span class="date">August 8th, 2024</span>
+        </div>
+        <div class="comment-content">
+            <div class="ListContent" id="comment-24986">
+<p>不知道博主看过VaDE这篇文章没有https://www.ijcai.org/proceedings/2017/0273.pdf, 用GMM表示latent space, 思路跟本文大体一致，公式推导也基本没差。主要区别在三点：1，方差设置为可学习参数而不是全部设为1；2.用贝叶斯求解p(y|z)而不是训练分类器；3.p(y)同样设为可学习参数而不是均匀分布. 经过在mnist和fashionmnist上测试发现，这三点均会导致acc低于本文设置。第一个相对好理解，增加了方差可能导致提前拟合从而cluster比较接近；第二点我猜是贝叶斯比较依赖初始化参数，因此VaDE需要预训练并拟合GMM得到参数进行初始化；最让我难以理解的是第三点，作者的代码直接设置可学习参数并按照均匀分布初始化p(y),然而训练过程中p(y)会不断变大导致概率和大于1违背逻辑，但性能并不差。当我尝试给可学习参数加个softmax作为p(y)反而性能大幅下降，不清楚问题出在哪</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-25015">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第8层</span>
+            <span class="date">August 14th, 2024</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-25015">
+<p>抱歉之前没看过VaDE。我去搜索了一下VaDE的代码（居然是keras+theano！），确实像你说的没有归一化，我也感觉比较奇怪。不过你说加上Softmax会大幅下降就更奇怪了，“大幅”是有多大来着？按理说固定为均匀分布也不会差很多？能不能看看加上Softmax后训练完成的$p(y)$长什么样？</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-25036">
+        <div class="comment-header">
+            <span class="author">Insomnia2410</span>
+            <span class="layer reply">第9层</span>
+            <span class="date">August 15th, 2024</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-25036">
+<p>我观察了训练过程，加了Softmax后训练一开始各类weight就会开始波动，而变小的weight会一直变小到最后成0，所以最终输出的label直接少了两三个导致准确率大幅下降。除非用temperature softmax让概率变化很慢性能才能接近均匀分布结果，但用均匀我担心并不适合所有情况，毕竟mnist是刚好各类比较均衡，如果用到我们没有groud truth的生物数据可能合理性会被质疑</p> 
+</div>
+        </div>
+    </div>
+    <div class="comment reply reply-deep" id="comment-25062">
+        <div class="comment-header">
+            <a href="https://kexue.fm" class="author admin" target="_blank">苏剑林</a>
+            <span class="layer reply">第10层</span>
+            <span class="date">August 19th, 2024</span>
+        </div>
+        <div class="comment-content">
+            <div class="comment_content" id="comment-25062">
+<p>看来是Softmax的赢者通吃特性造成了负面效果。</p><p>均匀分布是一个先验（正则），或者说是一个期望，期望算法能找到尽可能显著的规律（而不是过拟合），它的结果不一定是均匀，我觉得问题不大。就算不加该正则项，通常也要加别的，防止方差过大导致的过拟合问题。</p> 
+</div>
+        </div>
+    </div>
+</div>
+<div class="comment-thread">
+    <div class="comment" id="pingback-26120">
+        <div class="comment-header">
+            <span class="author">基于图嵌入的高斯混合变分自编码器的深度聚类(Deep Clustering by Gaussian Mixture Variational Autoencoders with Graph embedding, DGG)  R11;  matlab之家</span>
+            <span class="layer">第8层</span>
+            <span class="date">December 29th, 2024</span>
+        </div>
+        <div class="comment-content">
+            <div class="ListContent" id="pingback-26120">
+<p>[...]           2）这种架构和苏剑林博客中提到的VAE用于聚类的算法”变分自编码器（四）：一步到位的聚类方案 – 科学空间|Scientific Spaces“的网络架构有异曲同工之妙，不过苏剑林博客中的网路框架还多了一个自定义的Gaussian层，有兴趣的可以看看苏剑林那篇文章及代码。[...]</p> 
+</div>
+        </div>
+    </div>
+</div>
+
+        </main>
+        
+        <footer>
+            <p>数据来源: <a href="https://spaces.ac.cn/archives/5887" target="_blank">科学空间</a></p>
+            <p>本页面由爬虫脚本自动生成，包含原文所有评论</p>
+        </footer>
+    </div>
+</body>
+</html>

@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>科学空间博客系列文章目录</title>
+    <style>
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --accent: #58a6ff;
+            --accent-hover: #79c0ff;
+            --border: #30363d;
+            --success: #3fb950;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        header {
+            text-align: center;
+            padding: 3rem 0;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 2rem;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--accent), var(--success));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .meta {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-top: 1.5rem;
+        }
+        
+        .stat {
+            background: var(--bg-secondary);
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+        
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+        
+        .toc {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .toc h2 {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            color: var(--text-secondary);
+        }
+        
+        .toc-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 0.5rem;
+            list-style: none;
+        }
+        
+        .toc-list a {
+            color: var(--accent);
+            text-decoration: none;
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        
+        .toc-list a:hover {
+            background: var(--bg-tertiary);
+        }
+        
+        .toc-list .count {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+        
+        .series {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+        }
+        
+        .series-header {
+            background: var(--bg-tertiary);
+            padding: 1rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .series-header:hover {
+            background: var(--border);
+        }
+        
+        .series-header h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        
+        .series-header .badge {
+            background: var(--accent);
+            color: var(--bg-primary);
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .series-content {
+            padding: 0;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out, padding 0.3s;
+        }
+        
+        .series.open .series-content {
+            max-height: 2000px;
+            padding: 1rem 1.5rem;
+        }
+        
+        .article-list {
+            list-style: none;
+        }
+        
+        .article-list li {
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-list li:last-child {
+            border-bottom: none;
+        }
+        
+        .article-list a {
+            color: var(--text-primary);
+            text-decoration: none;
+            display: flex;
+            align-items: baseline;
+            gap: 0.75rem;
+            transition: color 0.2s;
+        }
+        
+        .article-list a:hover {
+            color: var(--accent);
+        }
+        
+        .episode {
+            color: var(--accent);
+            font-weight: 600;
+            min-width: 2rem;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            border-top: 1px solid var(--border);
+            margin-top: 2rem;
+        }
+        
+        footer a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            h1 {
+                font-size: 1.8rem;
+            }
+            
+            .stats {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .toc-list {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>科学空间博客系列文章目录</h1>
+            <p class="meta">自动生成于 2025-12-29 19:52:52</p>
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-value">32</div>
+                    <div class="stat-label">系列数量</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">184</div>
+                    <div class="stat-label">系列文章总数</div>
+                </div>
+            </div>
+        </header>
+        
+        <nav class="toc">
+            <h2>快速导航</h2>
+            <ul class="toc-list">
+                <li><a href="#AdamW的Weight-RMS的渐近估计">AdamW的Weight RMS的渐近估计<span class="count">2 篇</span></a></li>
+                <li><a href="#CoSENT">CoSENT<span class="count">3 篇</span></a></li>
+                <li><a href="#MoE环游记">MoE环游记<span class="count">5 篇</span></a></li>
+                <li><a href="#MuP之上">MuP之上<span class="count">1 篇</span></a></li>
+                <li><a href="#OCR技术浅探">OCR技术浅探<span class="count">11 篇</span></a></li>
+                <li><a href="#SVD分解">SVD分解<span class="count">3 篇</span></a></li>
+                <li><a href="#Transformer升级之路">Transformer升级之路<span class="count">21 篇</span></a></li>
+                <li><a href="#msign算子的Newton-Schulz迭代">msign算子的Newton-Schulz迭代<span class="count">2 篇</span></a></li>
+                <li><a href="#“闭门造车”之多模态思路浅谈">“闭门造车”之多模态思路浅谈<span class="count">3 篇</span></a></li>
+                <li><a href="#一维弹簧的运动">一维弹簧的运动<span class="count">2 篇</span></a></li>
+                <li><a href="#从动力学角度看优化算法">从动力学角度看优化算法<span class="count">7 篇</span></a></li>
+                <li><a href="#从费马大定理谈起">从费马大定理谈起<span class="count">13 篇</span></a></li>
+                <li><a href="#低秩近似之路">低秩近似之路<span class="count">5 篇</span></a></li>
+                <li><a href="#变分自编码器">变分自编码器<span class="count">8 篇</span></a></li>
+                <li><a href="#多任务学习漫谈">多任务学习漫谈<span class="count">3 篇</span></a></li>
+                <li><a href="#微积分学习">微积分学习<span class="count">2 篇</span></a></li>
+                <li><a href="#数学基本技艺之23、24">数学基本技艺之23、24<span class="count">2 篇</span></a></li>
+                <li><a href="#文本情感分类">文本情感分类<span class="count">4 篇</span></a></li>
+                <li><a href="#更别致的词向量模型">更别致的词向量模型<span class="count">6 篇</span></a></li>
+                <li><a href="#最小熵原理">最小熵原理<span class="count">6 篇</span></a></li>
+                <li><a href="#流形上的最速下降">流形上的最速下降<span class="count">6 篇</span></a></li>
+                <li><a href="#生成扩散模型漫谈">生成扩散模型漫谈<span class="count">32 篇</span></a></li>
+                <li><a href="#算子与线性常微分方程">算子与线性常微分方程<span class="count">2 篇</span></a></li>
+                <li><a href="#纠缠的时空">纠缠的时空<span class="count">3 篇</span></a></li>
+                <li><a href="#能量视角下的GAN模型">能量视角下的GAN模型<span class="count">3 篇</span></a></li>
+                <li><a href="#让炼丹更科学一些">让炼丹更科学一些<span class="count">7 篇</span></a></li>
+                <li><a href="#费曼积分法">费曼积分法<span class="count">4 篇</span></a></li>
+                <li><a href="#路径积分系列">路径积分系列<span class="count">5 篇</span></a></li>
+                <li><a href="#通用爬虫探索">通用爬虫探索<span class="count">3 篇</span></a></li>
+                <li><a href="#通过msign来计算奇异值裁剪mclip">通过msign来计算奇异值裁剪mclip<span class="count">2 篇</span></a></li>
+                <li><a href="#重新思考学习率与Batch-Size">重新思考学习率与Batch Size<span class="count">4 篇</span></a></li>
+                <li><a href="#重温SSM">重温SSM<span class="count">4 篇</span></a></li>
+            </ul>
+        </nav>
+        
+        <main>
+            <div class="series" id="AdamW的Weight-RMS的渐近估计">
+                <div class="series-header" onclick="this.parentElement.classList.toggle('open')">
+                    <h3>AdamW的Weight RMS的渐近估计</h3>
+                    <span class="badge">2 篇</span>
+                </div>
+                <div class="series-content">
+                    <ul class="article-list">
+                        <li><a href="https://spaces.ac.cn/archives/11307" target="_blank"><span class="episode">1.</span>上篇</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/11404" target="_blank"><span class="episode">3.</span>下篇</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="series" id="CoSENT">
+                <div class="series-header" onclick="this.parentElement.classList.toggle('open')">
+                    <h3>CoSENT</h3>
+                    <span class="badge">3 篇</span>
+                </div>
+                <div class="series-content">
+                    <ul class="article-list">
+                        <li><a href="https://spaces.ac.cn/archives/8847" target="_blank"><span class="episode">1.</span>比Sentence-BERT更有效的句向量方案</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/8860" target="_blank"><span class="episode">2.</span>特征式匹配与交互式匹配有多大差距？</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/9341" target="_blank"><span class="episode">3.</span>作为交互式相似度的损失函数</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="series" id="MoE环游记">
+                <div class="series-header" onclick="this.parentElement.classList.toggle('open')">
+                    <h3>MoE环游记</h3>
+                    <span class="badge">5 篇</span>
+                </div>
+                <div class="series-content">
+                    <ul class="article-list">
+                        <li><a href="https://spaces.ac.cn/archives/10699" target="_blank"><span class="episode">1.</span>从几何意义出发</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/10735" target="_blank"><span class="episode">2.</span>不患寡而患不均</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/10757" target="_blank"><span class="episode">3.</span>换个思路来分配</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/10815" target="_blank"><span class="episode">4.</span>难处应当多投入</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/10945" target="_blank"><span class="episode">5.</span>均匀分布的反思</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="series" id="MuP之上">
+                <div class="series-header" onclick="this.parentElement.classList.toggle('open')">
+                    <h3>MuP之上</h3>
+                    <span class="badge">1 篇</span>
+                </div>
+                <div class="series-content">
+                    <ul class="article-list">
+                        <li><a href="https://spaces.ac.cn/archives/11340" target="_blank"><span class="episode">1.</span>好模型的三个特征</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="series" id="OCR技术浅探">
+                <div class="series-header" onclick="this.parentElement.classList.toggle('open')">
+                    <h3>OCR技术浅探</h3>
+                    <span class="badge">11 篇</span>
+                </div>
+                <div class="series-content">
+                    <ul class="article-list">
+                        <li><a href="https://spaces.ac.cn/archives/3774" target="_blank"><span class="episode">1.</span>全文简述</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/3774" target="_blank"><span class="episode">1.</span>全文简述</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/3781" target="_blank"><span class="episode">2.</span>背景与假设</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/3802" target="_blank"><span class="episode">3.</span>特征提取(2)</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/3785" target="_blank"><span class="episode">3.</span>特征提取(1)</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/3818" target="_blank"><span class="episode">4.</span>文字定位</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/3823" target="_blank"><span class="episode">5.</span>文本切割</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/3831" target="_blank"><span class="episode">6.</span>光学识别</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/3842" target="_blank"><span class="episode">7.</span>语言模型</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/3854" target="_blank"><span class="episode">8.</span>综合评估</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/3856" target="_blank"><span class="episode">9.</span>代码共享(完)</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="series" id="SVD分解">
+                <div class="series-header" onclick="this.parentElement.classList.toggle('open')">
+                    <h3>SVD分解</h3>
+                    <span class="badge">3 篇</span>
+                </div>
+                <div class="series-content">
+                    <ul class="article-list">
+                        <li><a href="https://spaces.ac.cn/archives/4208" target="_blank"><span class="episode">1.</span>自编码器与人工智能</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/4216" target="_blank"><span class="episode">2.</span>为什么SVD意味着聚类？</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/4233" target="_blank"><span class="episode">3.</span>连Word2Vec都只不过是个SVD？</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="series" id="Transformer升级之路">
+                <div class="series-header" onclick="this.parentElement.classList.toggle('open')">
+                    <h3>Transformer升级之路</h3>
+                    <span class="badge">21 篇</span>
+                </div>
+                <div class="series-content">
+                    <ul class="article-list">
+                        <li><a href="https://spaces.ac.cn/archives/8231" target="_blank"><span class="episode">1.</span>Sinusoidal位置编码追根溯源</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/8265" target="_blank"><span class="episode">2.</span>博采众长的旋转式位置编码</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/8338" target="_blank"><span class="episode">3.</span>从Performer到线性Attention</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/8397" target="_blank"><span class="episode">4.</span>二维位置的旋转式位置编码</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/8601" target="_blank"><span class="episode">5.</span>作为无限维的线性Attention</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/9403" target="_blank"><span class="episode">6.</span>旋转位置编码的完备性分析</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/9431" target="_blank"><span class="episode">7.</span>长度外推性与局部注意力</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/9444" target="_blank"><span class="episode">8.</span>长度外推性与位置鲁棒性</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/9603" target="_blank"><span class="episode">9.</span>一种全局长度外推的新思路</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/9675" target="_blank"><span class="episode">10.</span>RoPE是一种β进制编码</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/9706" target="_blank"><span class="episode">11.</span>将β进制位置进行到底</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/9708" target="_blank"><span class="episode">12.</span>无限外推的ReRoPE？</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/9728" target="_blank"><span class="episode">13.</span>逆用Leaky ReRoPE</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/9731" target="_blank"><span class="episode">14.</span>当HWFA遇见ReRoPE</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/9859" target="_blank"><span class="episode">15.</span>Key归一化助力长度外推</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/9948" target="_blank"><span class="episode">16.</span>“复盘”长度外推技术</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/10040" target="_blank"><span class="episode">17.</span>多模态位置编码的简单思考</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/10122" target="_blank"><span class="episode">18.</span>RoPE的底数选择原则</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/10862" target="_blank"><span class="episode">19.</span>第二类旋转位置编码</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/10907" target="_blank"><span class="episode">20.</span>MLA好在哪里?（上）</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/11111" target="_blank"><span class="episode">21.</span>MLA好在哪里?（下）</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="series" id="msign算子的Newton-Schulz迭代">
+                <div class="series-header" onclick="this.parentElement.classList.toggle('open')">
+                    <h3>msign算子的Newton-Schulz迭代</h3>
+                    <span class="badge">2 篇</span>
+                </div>
+                <div class="series-content">
+                    <ul class="article-list">
+                        <li><a href="https://spaces.ac.cn/archives/10922" target="_blank"><span class="episode">1.</span>上篇</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/10996" target="_blank"><span class="episode">3.</span>下篇</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="series" id="“闭门造车”之多模态思路浅谈">
+                <div class="series-header" onclick="this.parentElement.classList.toggle('open')">
+                    <h3>“闭门造车”之多模态思路浅谈</h3>
+                    <span class="badge">3 篇</span>
+                </div>
+                <div class="series-content">
+                    <ul class="article-list">
+                        <li><a href="https://spaces.ac.cn/archives/9984" target="_blank"><span class="episode">1.</span>无损输入</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/10197" target="_blank"><span class="episode">2.</span>自回归</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/10352" target="_blank"><span class="episode">3.</span>位置编码</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="series" id="一维弹簧的运动">
+                <div class="series-header" onclick="this.parentElement.classList.toggle('open')">
+                    <h3>一维弹簧的运动</h3>
+                    <span class="badge">2 篇</span>
+                </div>
+                <div class="series-content">
+                    <ul class="article-list">
+                        <li><a href="https://spaces.ac.cn/archives/2430" target="_blank"><span class="episode">1.</span>上篇</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/2434" target="_blank"><span class="episode">3.</span>下篇</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="series" id="从动力学角度看优化算法">
+                <div class="series-header" onclick="this.parentElement.classList.toggle('open')">
+                    <h3>从动力学角度看优化算法</h3>
+                    <span class="badge">7 篇</span>
+                </div>
+                <div class="series-content">
+                    <ul class="article-list">
+                        <li><a href="https://spaces.ac.cn/archives/5655" target="_blank"><span class="episode">1.</span>从SGD到动量加速</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/6234" target="_blank"><span class="episode">2.</span>自适应学习率算法</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/6261" target="_blank"><span class="episode">3.</span>一个更整体的视角</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/6583" target="_blank"><span class="episode">4.</span>GAN的第三个阶段</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/7787" target="_blank"><span class="episode">5.</span>为什么学习率不宜过小？</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/7980" target="_blank"><span class="episode">6.</span>为什么SimSiam不退化？</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/8009" target="_blank"><span class="episode">7.</span>SGD ≈ SVM？</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="series" id="从费马大定理谈起">
+                <div class="series-header" onclick="this.parentElement.classList.toggle('open')">
+                    <h3>从费马大定理谈起</h3>
+                    <span class="badge">13 篇</span>
+                </div>
+                <div class="series-content">
+                    <ul class="article-list">
+                        <li><a href="https://spaces.ac.cn/archives/2805" target="_blank"><span class="episode">1.</span>背景简介</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/2808" target="_blank"><span class="episode">2.</span>勾股数</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/2811" target="_blank"><span class="episode">3.</span>高斯整数</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/2819" target="_blank"><span class="episode">4.</span>唯一分解整环</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/2831" target="_blank"><span class="episode">5.</span>n=4</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/2858" target="_blank"><span class="episode">6.</span>n=4（2）</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/2886" target="_blank"><span class="episode">7.</span>费马平方和定理</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/2886" target="_blank"><span class="episode">7.</span>费马平方和定理</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/2900" target="_blank"><span class="episode">8.</span>艾森斯坦整数</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/2910" target="_blank"><span class="episode">9.</span>n=3</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/2972" target="_blank"><span class="episode">10.</span>x^3+y^3=z^3+w^3</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/2996" target="_blank"><span class="episode">11.</span>有理点与切割线法</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/3008" target="_blank"><span class="episode">12.</span>再谈谈切线法</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="series" id="低秩近似之路">
+                <div class="series-header" onclick="this.parentElement.classList.toggle('open')">
+                    <h3>低秩近似之路</h3>
+                    <span class="badge">5 篇</span>
+                </div>
+                <div class="series-content">
+                    <ul class="article-list">
+                        <li><a href="https://spaces.ac.cn/archives/10366" target="_blank"><span class="episode">1.</span>伪逆</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/10407" target="_blank"><span class="episode">2.</span>SVD</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/10427" target="_blank"><span class="episode">3.</span>CR</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/10501" target="_blank"><span class="episode">4.</span>ID</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/10662" target="_blank"><span class="episode">5.</span>CUR</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="series" id="变分自编码器">
+                <div class="series-header" onclick="this.parentElement.classList.toggle('open')">
+                    <h3>变分自编码器</h3>
+                    <span class="badge">8 篇</span>
+                </div>
+                <div class="series-content">
+                    <ul class="article-list">
+                        <li><a href="https://spaces.ac.cn/archives/5253" target="_blank"><span class="episode">1.</span>原来是这么一回事</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/5343" target="_blank"><span class="episode">2.</span>从贝叶斯观点出发</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/5383" target="_blank"><span class="episode">3.</span>这样做为什么能成？</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/5887" target="_blank"><span class="episode">4.</span>一步到位的聚类方案</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/7381" target="_blank"><span class="episode">5.</span>VAE + BN = 更好的VAE</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/7725" target="_blank"><span class="episode">6.</span>从几何视角来理解VAE的尝试</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/8404" target="_blank"><span class="episode">7.</span>球面上的VAE（vMF-VAE）</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/8791" target="_blank"><span class="episode">8.</span>估计样本概率密度</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="series" id="多任务学习漫谈">
+                <div class="series-header" onclick="this.parentElement.classList.toggle('open')">
+                    <h3>多任务学习漫谈</h3>
+                    <span class="badge">3 篇</span>
+                </div>
+                <div class="series-content">
+                    <ul class="article-list">
+                        <li><a href="https://spaces.ac.cn/archives/8870" target="_blank"><span class="episode">1.</span>以损失之名</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/8896" target="_blank"><span class="episode">2.</span>行梯度之事</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/8907" target="_blank"><span class="episode">3.</span>分主次之序</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="series" id="微积分学习">
+                <div class="series-header" onclick="this.parentElement.classList.toggle('open')">
+                    <h3>微积分学习</h3>
+                    <span class="badge">2 篇</span>
+                </div>
+                <div class="series-content">
+                    <ul class="article-list">
+                        <li><a href="https://spaces.ac.cn/archives/75" target="_blank"><span class="episode">1.</span>极限</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/118" target="_blank"><span class="episode">2.</span>导数</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="series" id="数学基本技艺之23、24">
+                <div class="series-header" onclick="this.parentElement.classList.toggle('open')">
+                    <h3>数学基本技艺之23、24</h3>
+                    <span class="badge">2 篇</span>
+                </div>
+                <div class="series-content">
+                    <ul class="article-list">
+                        <li><a href="https://spaces.ac.cn/archives/2083" target="_blank"><span class="episode">1.</span>上篇</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/2096" target="_blank"><span class="episode">3.</span>下篇</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="series" id="文本情感分类">
+                <div class="series-header" onclick="this.parentElement.classList.toggle('open')">
+                    <h3>文本情感分类</h3>
+                    <span class="badge">4 篇</span>
+                </div>
+                <div class="series-content">
+                    <ul class="article-list">
+                        <li><a href="https://spaces.ac.cn/archives/3360" target="_blank"><span class="episode">1.</span>传统模型</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/3414" target="_blank"><span class="episode">2.</span>深度学习模型</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/3863" target="_blank"><span class="episode">3.</span>分词 OR 不分词</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/4293" target="_blank"><span class="episode">4.</span>更好的损失函数</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="series" id="更别致的词向量模型">
+                <div class="series-header" onclick="this.parentElement.classList.toggle('open')">
+                    <h3>更别致的词向量模型</h3>
+                    <span class="badge">6 篇</span>
+                </div>
+                <div class="series-content">
+                    <ul class="article-list">
+                        <li><a href="https://spaces.ac.cn/archives/4667" target="_blank"><span class="episode">1.</span>simpler glove</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/4669" target="_blank"><span class="episode">2.</span>对语言进行建模</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/4671" target="_blank"><span class="episode">3.</span>描述相关的模型</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/4675" target="_blank"><span class="episode">4.</span>模型的求解</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/4677" target="_blank"><span class="episode">5.</span>有趣的结果</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/4681" target="_blank"><span class="episode">6.</span>代码、分享与结语</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="series" id="最小熵原理">
+                <div class="series-header" onclick="this.parentElement.classList.toggle('open')">
+                    <h3>最小熵原理</h3>
+                    <span class="badge">6 篇</span>
+                </div>
+                <div class="series-content">
+                    <ul class="article-list">
+                        <li><a href="https://spaces.ac.cn/archives/5448" target="_blank"><span class="episode">1.</span>无监督学习的原理</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/5476" target="_blank"><span class="episode">2.</span>“当机立断”之词库构建</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/5577" target="_blank"><span class="episode">3.</span>“飞象过河”之句模版和语言结构</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/6191" target="_blank"><span class="episode">4.</span>“物以类聚”之从图书馆到词向量</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/7006" target="_blank"><span class="episode">5.</span>“层层递进”之社区发现与聚类</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/7695" target="_blank"><span class="episode">6.</span>词向量的维度应该怎么选择？</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="series" id="流形上的最速下降">
+                <div class="series-header" onclick="this.parentElement.classList.toggle('open')">
+                    <h3>流形上的最速下降</h3>
+                    <span class="badge">6 篇</span>
+                </div>
+                <div class="series-content">
+                    <ul class="article-list">
+                        <li><a href="https://spaces.ac.cn/archives/11196" target="_blank"><span class="episode">1.</span>SGD + 超球面</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/11215" target="_blank"><span class="episode">2.</span>Muon + 正交</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/11221" target="_blank"><span class="episode">3.</span>Muon + Stiefel</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/11241" target="_blank"><span class="episode">4.</span>Muon + 谱球面</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/11388" target="_blank"><span class="episode">5.</span>对偶梯度下降</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/11388" target="_blank"><span class="episode">5.</span>对偶梯度下降</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="series" id="生成扩散模型漫谈">
+                <div class="series-header" onclick="this.parentElement.classList.toggle('open')">
+                    <h3>生成扩散模型漫谈</h3>
+                    <span class="badge">32 篇</span>
+                </div>
+                <div class="series-content">
+                    <ul class="article-list">
+                        <li><a href="https://spaces.ac.cn/archives/9119" target="_blank"><span class="episode">1.</span>DDPM = 拆楼 + 建楼</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/9152" target="_blank"><span class="episode">2.</span>DDPM = 自回归式VAE</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/9164" target="_blank"><span class="episode">3.</span>DDPM = 贝叶斯 + 去噪</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/9181" target="_blank"><span class="episode">4.</span>DDIM = 高观点DDPM</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/9209" target="_blank"><span class="episode">5.</span>一般框架之SDE篇</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/9228" target="_blank"><span class="episode">6.</span>一般框架之ODE篇</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/9245" target="_blank"><span class="episode">7.</span>最优扩散方差估计（上）</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/9246" target="_blank"><span class="episode">8.</span>最优扩散方差估计（下）</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/9257" target="_blank"><span class="episode">9.</span>条件控制生成结果</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/9262" target="_blank"><span class="episode">10.</span>统一扩散模型（理论篇）</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/9271" target="_blank"><span class="episode">11.</span>统一扩散模型（应用篇）</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/9280" target="_blank"><span class="episode">12.</span>“硬刚”扩散ODE</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/9305" target="_blank"><span class="episode">13.</span>从万有引力到扩散模型</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/9370" target="_blank"><span class="episode">14.</span>构建ODE的一般步骤（上）</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/9379" target="_blank"><span class="episode">15.</span>构建ODE的一般步骤（中）</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/9467" target="_blank"><span class="episode">16.</span>W距离 ≤ 得分匹配</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/9497" target="_blank"><span class="episode">17.</span>构建ODE的一般步骤（下）</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/9509" target="_blank"><span class="episode">18.</span>得分匹配 = 条件得分匹配</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/9662" target="_blank"><span class="episode">19.</span>作为扩散ODE的GAN</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/9668" target="_blank"><span class="episode">20.</span>从ReFlow到WGAN-GP</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/9881" target="_blank"><span class="episode">21.</span>中值定理加速ODE采样</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/10047" target="_blank"><span class="episode">22.</span>信噪比与大图生成（上）</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/10055" target="_blank"><span class="episode">23.</span>信噪比与大图生成（下）</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/10077" target="_blank"><span class="episode">24.</span>少走捷径，更快到达</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/10085" target="_blank"><span class="episode">25.</span>基于恒等式的蒸馏（上）</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/10567" target="_blank"><span class="episode">26.</span>基于恒等式的蒸馏（下）</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/10617" target="_blank"><span class="episode">27.</span>将步长作为条件输入</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/10633" target="_blank"><span class="episode">28.</span>分步理解一致性模型</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/10711" target="_blank"><span class="episode">29.</span>用DDPM来离散编码</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/10958" target="_blank"><span class="episode">30.</span>从瞬时速度到平均速度</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/11428" target="_blank"><span class="episode">31.</span>预测数...</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/11428" target="_blank"><span class="episode">31.</span>预测数据而非噪声</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="series" id="算子与线性常微分方程">
+                <div class="series-header" onclick="this.parentElement.classList.toggle('open')">
+                    <h3>算子与线性常微分方程</h3>
+                    <span class="badge">2 篇</span>
+                </div>
+                <div class="series-content">
+                    <ul class="article-list">
+                        <li><a href="https://spaces.ac.cn/archives/1791" target="_blank"><span class="episode">1.</span>上篇</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/1794" target="_blank"><span class="episode">3.</span>下篇</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="series" id="纠缠的时空">
+                <div class="series-header" onclick="this.parentElement.classList.toggle('open')">
+                    <h3>纠缠的时空</h3>
+                    <span class="badge">3 篇</span>
+                </div>
+                <div class="series-content">
+                    <ul class="article-list">
+                        <li><a href="https://spaces.ac.cn/archives/1889" target="_blank"><span class="episode">1.</span>洛仑兹变换的矩阵</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/1923" target="_blank"><span class="episode">2.</span>洛仑兹变换的矩阵(续)</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/1971" target="_blank"><span class="episode">3.</span>长度收缩和时间延缓</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="series" id="能量视角下的GAN模型">
+                <div class="series-header" onclick="this.parentElement.classList.toggle('open')">
+                    <h3>能量视角下的GAN模型</h3>
+                    <span class="badge">3 篇</span>
+                </div>
+                <div class="series-content">
+                    <ul class="article-list">
+                        <li><a href="https://spaces.ac.cn/archives/6316" target="_blank"><span class="episode">1.</span>GAN＝“挖坑”＋“跳坑”</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/6331" target="_blank"><span class="episode">2.</span>GAN＝“分析”＋“采样”</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/6612" target="_blank"><span class="episode">3.</span>生成模型=能量模型</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="series" id="让炼丹更科学一些">
+                <div class="series-header" onclick="this.parentElement.classList.toggle('open')">
+                    <h3>让炼丹更科学一些</h3>
+                    <span class="badge">7 篇</span>
+                </div>
+                <div class="series-content">
+                    <ul class="article-list">
+                        <li><a href="https://spaces.ac.cn/archives/9902" target="_blank"><span class="episode">1.</span>SGD的平均损失收敛</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/11469" target="_blank"><span class="episode">2.</span>将结论推广...</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/11469" target="_blank"><span class="episode">2.</span>将结论推广到无界域</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/11480" target="_blank"><span class="episode">3.</span>SGD的终...</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/11480" target="_blank"><span class="episode">3.</span>SGD的终点损失收敛</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/11494" target="_blank"><span class="episode">4.</span>新恒等式，...</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/11494" target="_blank"><span class="episode">4.</span>新恒等式，新学习率</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="series" id="费曼积分法">
+                <div class="series-header" onclick="this.parentElement.classList.toggle('open')">
+                    <h3>费曼积分法</h3>
+                    <span class="badge">4 篇</span>
+                </div>
+                <div class="series-content">
+                    <ul class="article-list">
+                        <li><a href="https://spaces.ac.cn/archives/1942" target="_blank"><span class="episode">5.</span>欧拉数学的传承</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/1944" target="_blank"><span class="episode">6.</span>教科书上的两道练习题</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/1946" target="_blank"><span class="episode">7.</span>欧拉数学的综合</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/1967" target="_blank"><span class="episode">8.</span>求高斯积分</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="series" id="路径积分系列">
+                <div class="series-header" onclick="this.parentElement.classList.toggle('open')">
+                    <h3>路径积分系列</h3>
+                    <span class="badge">5 篇</span>
+                </div>
+                <div class="series-content">
+                    <ul class="article-list">
+                        <li><a href="https://spaces.ac.cn/archives/3749" target="_blank"><span class="episode">1.</span>我的毕业论文</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/3750" target="_blank"><span class="episode">2.</span>随机游走模型</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/3757" target="_blank"><span class="episode">3.</span>路径积分</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/3762" target="_blank"><span class="episode">4.</span>随机微分方程</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/3766" target="_blank"><span class="episode">5.</span>例子和综述</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="series" id="通用爬虫探索">
+                <div class="series-header" onclick="this.parentElement.classList.toggle('open')">
+                    <h3>通用爬虫探索</h3>
+                    <span class="badge">3 篇</span>
+                </div>
+                <div class="series-content">
+                    <ul class="article-list">
+                        <li><a href="https://spaces.ac.cn/archives/4413" target="_blank"><span class="episode">1.</span>适用一般网站的爬虫</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/4422" target="_blank"><span class="episode">2.</span>落实到论坛爬取上</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/4430" target="_blank"><span class="episode">3.</span>效果展示与代码</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="series" id="通过msign来计算奇异值裁剪mclip">
+                <div class="series-header" onclick="this.parentElement.classList.toggle('open')">
+                    <h3>通过msign来计算奇异值裁剪mclip</h3>
+                    <span class="badge">2 篇</span>
+                </div>
+                <div class="series-content">
+                    <ul class="article-list">
+                        <li><a href="https://spaces.ac.cn/archives/11006" target="_blank"><span class="episode">1.</span>上篇</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/11059" target="_blank"><span class="episode">3.</span>下篇</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="series" id="重新思考学习率与Batch-Size">
+                <div class="series-header" onclick="this.parentElement.classList.toggle('open')">
+                    <h3>重新思考学习率与Batch Size</h3>
+                    <span class="badge">4 篇</span>
+                </div>
+                <div class="series-content">
+                    <ul class="article-list">
+                        <li><a href="https://spaces.ac.cn/archives/11260" target="_blank"><span class="episode">1.</span>现状</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/11280" target="_blank"><span class="episode">2.</span>平均场</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/11285" target="_blank"><span class="episode">3.</span>Muon</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/11301" target="_blank"><span class="episode">4.</span>EMA</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="series" id="重温SSM">
+                <div class="series-header" onclick="this.parentElement.classList.toggle('open')">
+                    <h3>重温SSM</h3>
+                    <span class="badge">4 篇</span>
+                </div>
+                <div class="series-content">
+                    <ul class="article-list">
+                        <li><a href="https://spaces.ac.cn/archives/10114" target="_blank"><span class="episode">1.</span>线性系统和HiPPO矩阵</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/10137" target="_blank"><span class="episode">2.</span>HiPPO的一些遗留问题</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/10162" target="_blank"><span class="episode">3.</span>HiPPO的高效计算（S4）</a></li>
+                        <li><a href="https://spaces.ac.cn/archives/10180" target="_blank"><span class="episode">4.</span>有理生成函数的新视角</a></li>
+                    </ul>
+                </div>
+            </div>
+        </main>
+        
+        <footer>
+            <p>数据来源: <a href="https://spaces.ac.cn/" target="_blank">科学空间 (spaces.ac.cn)</a></p>
+            <p>本目录由爬虫脚本自动生成</p>
+        </footer>
+    </div>
+    
+    <script>
+        // 默认展开第一个系列
+        document.querySelector('.series')?.classList.add('open');
+    </script>
+</body>
+</html>
