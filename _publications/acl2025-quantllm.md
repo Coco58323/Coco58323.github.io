@@ -1,7 +1,7 @@
 ---
 title: "One QuantLLM for ALL: Fine-tuning Quantized LLMs Once for Efficient Deployments"
 collection: publications
-link: https://arxiv.org/abs/2405.20202
+permalink: /publication/acl2025-quantllm
 excerpt: 'A unified approach for fine-tuning quantized LLMs that enables efficient deployment across different scenarios.'
 date: 2025-02-02
 venue: 'ACL'

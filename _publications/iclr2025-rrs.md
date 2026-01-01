@@ -1,7 +1,7 @@
 ---
 title: "Rotated Runtime Smooth: Training-Free Activation Smoother for Accurate INT4 Inference"
 collection: publications
-link: https://arxiv.org/abs/2409.20002
+permalink: /publication/iclr2025-rrs
 excerpt: 'A novel training-free activation smoothing method that enables accurate INT4 inference for LLMs by handling outliers in real-time.'
 date: 2025-01-01
 venue: 'ICLR'
