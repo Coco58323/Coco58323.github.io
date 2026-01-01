@@ -1,6 +1,6 @@
 # 科学空间博客系列文章目录
 
-> 生成时间: 2025-12-29 19:52:52
+> 生成时间: 2026-01-01 11:00:21
 > 来源: https://spaces.ac.cn/
 > 系列数量: 32
 
@@ -9,17 +9,17 @@
 ## 目录
 
 1. [AdamW的Weight RMS的渐近估计](#adamw的weight-rms的渐近估计) (2 篇)
-2. [CoSENT](#cosent) (3 篇)
+2. [CoSENT](#cosent) (4 篇)
 3. [MoE环游记](#moe环游记) (5 篇)
 4. [MuP之上](#mup之上) (1 篇)
-5. [OCR技术浅探](#ocr技术浅探) (11 篇)
+5. [OCR技术浅探](#ocr技术浅探) (10 篇)
 6. [SVD分解](#svd分解) (3 篇)
 7. [Transformer升级之路](#transformer升级之路) (21 篇)
 8. [msign算子的Newton-Schulz迭代](#msign算子的newton-schulz迭代) (2 篇)
 9. [“闭门造车”之多模态思路浅谈](#“闭门造车”之多模态思路浅谈) (3 篇)
 10. [一维弹簧的运动](#一维弹簧的运动) (2 篇)
 11. [从动力学角度看优化算法](#从动力学角度看优化算法) (7 篇)
-12. [从费马大定理谈起](#从费马大定理谈起) (13 篇)
+12. [从费马大定理谈起](#从费马大定理谈起) (12 篇)
 13. [低秩近似之路](#低秩近似之路) (5 篇)
 14. [变分自编码器](#变分自编码器) (8 篇)
 15. [多任务学习漫谈](#多任务学习漫谈) (3 篇)
@@ -52,8 +52,9 @@
 
 ## CoSENT
 
-共 3 篇文章
+共 4 篇文章
 
+- [CoSENT（一）：比Sentence-BERT更有效的句向量方案](https://spaces.ac.cn/archives/8847)
 - [CoSENT（一）：比Sentence-BERT更有效的句向量方案](https://spaces.ac.cn/archives/8847)
 - [CoSENT（二）：特征式匹配与交互式匹配有多大差距？](https://spaces.ac.cn/archives/8860)
 - [CoSENT（三）：作为交互式相似度的损失函数](https://spaces.ac.cn/archives/9341)
@@ -76,9 +77,8 @@
 
 ## OCR技术浅探
 
-共 11 篇文章
+共 10 篇文章
 
-- [OCR技术浅探：1. 全文简述](https://spaces.ac.cn/archives/3774)
 - [OCR技术浅探：1. 全文简述](https://spaces.ac.cn/archives/3774)
 - [OCR技术浅探：2. 背景与假设](https://spaces.ac.cn/archives/3781)
 - [OCR技术浅探：3. 特征提取(2)](https://spaces.ac.cn/archives/3802)
@@ -160,7 +160,7 @@
 
 ## 从费马大定理谈起
 
-共 13 篇文章
+共 12 篇文章
 
 - [从费马大定理谈起（一）：背景简介](https://spaces.ac.cn/archives/2805)
 - [从费马大定理谈起（二）：勾股数](https://spaces.ac.cn/archives/2808)
@@ -168,7 +168,6 @@
 - [从费马大定理谈起（四）：唯一分解整环](https://spaces.ac.cn/archives/2819)
 - [从费马大定理谈起（五）：n=4](https://spaces.ac.cn/archives/2831)
 - [从费马大定理谈起（六）：n=4（2）](https://spaces.ac.cn/archives/2858)
-- [从费马大定理谈起（七）：费马平方和定理](https://spaces.ac.cn/archives/2886)
 - [从费马大定理谈起（七）：费马平方和定理](https://spaces.ac.cn/archives/2886)
 - [从费马大定理谈起（八）：艾森斯坦整数](https://spaces.ac.cn/archives/2900)
 - [从费马大定理谈起（九）：n=3](https://spaces.ac.cn/archives/2910)

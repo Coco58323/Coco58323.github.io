@@ -1,5 +1,5 @@
 {
-  "generated_at": "2025-12-29T19:52:52.414995",
+  "generated_at": "2026-01-01T11:00:21.005410",
   "source": "https://spaces.ac.cn/",
   "series_count": 32,
   "series": {
@@ -21,8 +21,14 @@
       ]
     },
     "CoSENT": {
-      "article_count": 3,
+      "article_count": 4,
       "articles": [
+        {
+          "episode": 1,
+          "title": "比Sentence-BERT更有效的句向量方案",
+          "full_title": "CoSENT（一）：比Sentence-BERT更有效的句向量方案",
+          "url": "https://spaces.ac.cn/archives/8847"
+        },
         {
           "episode": 1,
           "title": "比Sentence-BERT更有效的句向量方案",
@@ -90,14 +96,8 @@
       ]
     },
     "OCR技术浅探": {
-      "article_count": 11,
+      "article_count": 10,
       "articles": [
-        {
-          "episode": 1,
-          "title": "全文简述",
-          "full_title": "OCR技术浅探：1. 全文简述",
-          "url": "https://spaces.ac.cn/archives/3774"
-        },
         {
           "episode": 1,
           "title": "全文简述",
@@ -419,7 +419,7 @@
       ]
     },
     "从费马大定理谈起": {
-      "article_count": 13,
+      "article_count": 12,
       "articles": [
         {
           "episode": 1,
@@ -456,12 +456,6 @@
           "title": "n=4（2）",
           "full_title": "从费马大定理谈起（六）：n=4（2）",
           "url": "https://spaces.ac.cn/archives/2858"
-        },
-        {
-          "episode": 7,
-          "title": "费马平方和定理",
-          "full_title": "从费马大定理谈起（七）：费马平方和定理",
-          "url": "https://spaces.ac.cn/archives/2886"
         },
         {
           "episode": 7,
